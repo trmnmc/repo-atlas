@@ -122,10 +122,10 @@
       ],
       "acceptance": "With an injected fixture scanner, GET /api/atlas returns the cached Snapshot instantly, POST /api/rescan returns before the scan completes, /api/scan-events emits contract ScanEvents in order ending with a terminal completion event after which /api/atlas serves the fresh data without a server restart, and /api/repo/:id returns drill-down detail",
       "packages": [],
-      "status": "todo",
+      "status": "done",
       "model": "sonnet",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 6: per-merge tests + live boot smoke + look pass"
     },
     {
       "id": "T-006",
@@ -208,10 +208,10 @@
         "react",
         "@testing-library/react"
       ],
-      "status": "todo",
+      "status": "done",
       "model": "opus",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 6: per-merge tests + live boot smoke + look pass"
     },
     {
       "id": "T-009",
@@ -294,6 +294,47 @@
       "model": "sonnet",
       "attempts": 0,
       "notes": ""
+    },
+    {
+      "id": "F-012",
+      "title": "Attention queue omits dirty repos whose lastCommit is null (zero-commit repos) — include dirty repos regardless of commit history",
+      "kind": "fix",
+      "priority": 10,
+      "value": "H",
+      "effort": "S",
+      "deps": [],
+      "files_hint": [
+        "server/attention.js",
+        "server/attention.test.js"
+      ],
+      "acceptance": "A dirty repo with zero commits (lastCommit null) appears in the attention queue with reason dirty (lastActivityIso falls back sensibly), and the Notices count matches the Gazetteer dirty count",
+      "packages": [],
+      "route_class": "core",
+      "status": "todo",
+      "model": "fable",
+      "attempts": 0,
+      "notes": "look finding medium, cycle 6: MINECRAFT-AI-BUIDLER + mocktail dirty:true absent from attention"
+    },
+    {
+      "id": "F-013",
+      "title": "Chart edge cases from look pass: Sparkline reading collides with rising line; empty-window Heatmap month labels overlap (Dec/Jan); Heatmap renders future days as observed; Strata empty state is a blank block",
+      "kind": "fix",
+      "priority": 12,
+      "value": "M",
+      "effort": "M",
+      "deps": [],
+      "files_hint": [
+        "src/charts/Sparkline.tsx",
+        "src/charts/Heatmap.tsx",
+        "src/charts/Strata.tsx",
+        "src/charts/charts.test.tsx"
+      ],
+      "acceptance": "Sparkline reading never overlaps its line, an empty-activity heatmap window shows non-overlapping month labels and no cells after the snapshot day, and an empty Strata renders an explicit empty-state message like neighboring plates",
+      "packages": [],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": "look findings low x4, cycle 6; folded into one item — all touch charts.test.tsx"
     }
   ]
 }

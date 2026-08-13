@@ -1,0 +1,114 @@
+{
+  "summary": "QA against the live product: spec-only scenario author, executor, and a live-look agent; cheap look-only mode for post-merge checks; taste mode judges where the product gets boring",
+  "agentCount": 1,
+  "logs": [
+    "qa-verify @ 1786664900 | mode look | cycle-006-postmerge-look | models a/e/l: fable/sonnet/fable",
+    "qa-verify done: 0 scenario(s), 0 fail(s), 5 look finding(s)"
+  ],
+  "result": {
+    "runId": "qa-verify@1786664900",
+    "mode": "look",
+    "scenarios": [],
+    "results": [],
+    "look": {
+      "findings": [
+        {
+          "severity": "medium",
+          "where": "Overview — Fig. 1 Notices to Mariners",
+          "expected": "The queue's own caption says \"dirty trees first\": every repo with uncommitted work should appear in the dirty group with a vermilion dirty tag. MINECRAFT-AI-BUIDLER and mocktail are dirty:true in /api/atlas and both render a \"dirty\" badge in the Fig. 5 Gazetteer.",
+          "found": "Both repos are listed only in the trailing \"no remote\" group of the Notices with no dirty tag — a user triaging the attention queue would read them as clean. The server's attention array contains 19 dirty entries and omits exactly these two (both have lastCommit: null), so the client files them under its no-remote fallback group.",
+          "evidence": "API capture: attention reasons list has 19 ':dirty' entries; repos minecraft-ai-buidler and mocktail have {dirty:true, lastCommit:null}. Rendered text shows Notices rows 'no remote MINECRAFT-AI-BUIDLER main —' / 'no remote mocktail main —' while Gazetteer rows show 'MINECRAFT-AI-BUIDLER main dirty no remote' / 'mocktail main dirty no remote'. Screenshots: cycle-006-postmerge-look-qa-notices-noremote-group.png (notices rows), cycle-006-postmerge-look-qa-stats-gazetteer.png (Dirty trees stat = 21 vs only 19 dirty notices)."
+        },
+        {
+          "severity": "low",
+          "where": "Overview — Fig. 4 Legend & Reckonings sparklines",
+          "expected": "The sparkline's last-value reading should be legible next to the trend line.",
+          "found": "The reading text is anchored bottom-right of the SVG, exactly where the line ends when the trend rises, so the stroke strikes through the numerals: \"313\" (Commits this month tile) and \"96\" (Most active tile) both render with the ink line crossing the digits. The values themselves are correct (hand-computed trailing-week totals: aggregate 313, SWARM 96).",
+          "evidence": "Screenshot cycle-006-postmerge-look-qa-sparkline-collision.png — line passes through both readings. Sparkline.tsx draws <text x={WIDTH} y={HEIGHT-1}> unconditionally at bottom-right."
+        },
+        {
+          "severity": "low",
+          "where": "Repo detail (#/repo/<id>) — Fig. 6 Commit Soundings for repos with no commit activity",
+          "expected": "Month labels along the top of the per-repo heatmap should be spaced like the overview heatmap (Aug Sep Oct ... Aug, no collisions).",
+          "found": "For a repo with zero commit days (e.g. the uv-cache sdists-v9 repo), the heatmap window renders \"Dec\" and \"Jan\" printed on top of each other at the left edge (reads as a jumbled \"DJec an\"). Repos with commits (SWARM) label cleanly, so the collision is scoped to the empty-activity window.",
+          "evidence": "Screenshots cycle-006-postmerge-look-qa-empty-repo-dec-jan-overlap.png and cycle-006-postmerge-look-qa-empty-strata-blank-block.png (top of frame). Contrast: SWARM detail label x-positions measured via DOM: Aug 137, Sep 225 ... no overlap."
+        },
+        {
+          "severity": "low",
+          "where": "Repo detail (#/repo/<id>) — Fig. 7 Strata of the Codebase for repos with zero counted lines",
+          "expected": "An explicit empty state consistent with the neighboring plates (Fig. 8/9/10 say \"No recent commits.\" / \"No recently touched files.\" / \"No branches.\").",
+          "found": "Fig. 7 renders a large featureless beige rectangle spanning the plate — no segments, no language labels, no message — which reads as a broken/unloaded chart.",
+          "evidence": "Screenshot cycle-006-postmerge-look-qa-empty-strata-blank-block.png (repo agents-alpaca-mcp-server-uv-cache-sdists-v9, loc {}); plate text content is only \"Fig. 7 Strata of the Codebase\" with no data or empty-state string."
+        },
+        {
+          "severity": "low",
+          "where": "Overview — Fig. 2 Commit Soundings heatmap",
+          "expected": "The heatmap should chart days up to the snapshot instant (generatedAt 2026-08-13); days that have not happened yet should not be presented as observed quiet days.",
+          "found": "Cells for future days exist and are announced as real readings: aria-label \"2026-08-14: 0 commits\" and \"2026-08-15: 0 commits\", visually identical to genuine zero-commit days.",
+          "evidence": "DOM capture of the last heatmap cells: [{aria:\"2026-08-13: 72 commits\"},{aria:\"2026-08-14: 0 commits\"},{aria:\"2026-08-15: 0 commits\"}] while /api/atlas generatedAt is 2026-08-13T23:43:15.599Z."
+        }
+      ],
+      "screenshots": [
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-overview-top.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-notices-noremote-group.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-stats-gazetteer.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-sparkline-collision.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-timeline-narrowed.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-repo-detail-random.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-empty-repo-dec-jan-overlap.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-empty-strata-blank-block.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-006-postmerge-look-qa-overview-dark.png"
+      ],
+      "server_log_tail": "> repo-atlas@0.1.0 start\n> vite build && node server/index.js\n\nvite v8.2.1 building client environment for production...\ntransforming... 37 modules transformed.\ndist/index.html                   1.07 kB | gzip:  0.59 kB\ndist/assets/index-CaFJeF-z.css   18.50 kB | gzip:  3.72 kB\ndist/assets/index-DRyK1UzD.js   219.06 kB | gzip: 68.62 kB\nbuilt in 74ms\n[repo-atlas] listening on http://localhost:4600\n(no errors; no browser console errors on any page visited. Verified working: stats hand-checked exact (39 repos / 347 Aug commits / SWARM 120 / 21 dirty), LOC sums exact (repo-atlas 17,376; random strata matches API), heatmap day counts exact (08-09=147, 08-13=72), day-click narrows Fig.3 correctly (week of 08-09 = 232) and toggles off, Gazetteer search (swarm 1/39, typescript 20/39) and Lines-descending sort, j/k+Enter keyboard nav opens #/repo/<id>, drill-down figures match API, unknown-id empty state, Rescan live progress 0/0→3/39→37/39→done, dark theme legible. Server killed after run; port 4600 confirmed clear.)"
+    },
+    "taste": null,
+    "agents_used": 1,
+    "dead_agents": [],
+    "timestamp": "1786664900"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Author"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Execute"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Look"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 4,
+      "title": "Taste"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "live-look",
+      "phaseIndex": 3,
+      "phaseTitle": "Look",
+      "agentId": "a3c7f5f2ae74dd7aa",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786664581424,
+      "queuedAt": 1786664579828,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "> repo-atlas@0.1.0 start > vite build && node server/index.…",
+      "promptPreview": "You are the live-look agent in an overnight autonomous swarm — the one\nagent whose ONLY job is to LOOK at the running product the way a human\nuser would. Test suites can be green while the rendered app is garbage\n(two modules shadowing one global put \"new moon - 82% illuminated\" where\na score belonged, with 28/28 tests passing and no console error). You are\nthe defense against that class of bug.\n\n…",
+      "lastProgressAt": 1786665270898,
+      "tokens": 87717,
+      "toolCalls": 74,
+      "durationMs": 689474,
+      "resultPreview": "{\"findings\":[{\"severity\":\"medium\",\"where\":\"Overview — Fig. 1 Notices to Mariners\",\"expected\":\"The queue's own caption says \\\"dirty trees first\\\": every repo with uncommitted work should appear in the dirty group with a vermilion dirty tag. MINECRAFT-AI-BUIDLER and mocktail are dirty:true in /api/atlas and both render a \\\"dirty\\\" badge in the Fig. 5 Gazetteer.\",\"found\":\"Both repos are listed only i…"
+    }
+  ],
+  "totalTokens": 87717,
+  "totalToolCalls": 74
+}

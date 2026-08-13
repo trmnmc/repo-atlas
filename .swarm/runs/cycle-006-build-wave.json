@@ -1,0 +1,95 @@
+{
+  "summary": "Parallel feature builders in isolated worktrees; returns claims for conductor verification",
+  "agentCount": 2,
+  "logs": [
+    "wave @ 1786663270 [T-005 \"HTTP server on :4600: static dist, cache-first GET /api/atlas, POST /api/rescan async job, GET /api/scan-events SSE progress, GET /api/repo/:id\" (sonnet/high), T-008 \"App shell + Overview folio: masthead, hash routing, Fig. 1 Notices attention queue, Fig. 2/3 heatmap+timeline with cross-filter wiring, Fig. 4 Legend stats row, Fig. 5 Gazetteer with search/sort, ScanBar rescan progress\" (opus/high)]"
+  ],
+  "result": {
+    "wave": [
+      {
+        "itemId": "T-005",
+        "status": "done",
+        "branch": "wave-663270-T-005",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-005.8utYBe",
+        "files_changed": [
+          "server/index.js",
+          "server/index.test.js"
+        ],
+        "summary": "Built server/index.js: createServer({rootDir, cacheFile, scanFn, port, nowFn, distDir}) returns an un-listened node http.Server (distDir is an additive optional param, defaulting to <project-root>/dist, so tests can isolate static-file fixtures without touching the real dist/). A main-entry block (import.meta.url guard) listens on :4600 with rootDir=~/Projects, cacheFile=.atlas-cache.json at the project root, the real scan, and kicks a background rescan on boot via a server.triggerRescan escape hatch. GET /api/atlas is cache-first from an in-memory snapshot seeded from cacheFile on boot, never 500s, and answers the {generatedAt:null,repos:[],attention:[]} empty shape when nothing has ever loaded. POST /api/rescan fires scanFn async and returns 202 immediately; single-flight is enforced with a synchronous check-and-set flag (no await before it flips) so a second concurrent POST never starts a second scan. GET /api/scan-events is an SSE hub replaying the current/most-recent scan's buffered events to a fresh subscriber then streaming live ones, ending the connection at 'done'. I found and fixed a real ordering bug during testing: scan.js's contract emits its terminal 'done' progress event and THEN returns the snapshot, so naively wiring onProgress straight to the SSE broadcast let subscribers observe 'done' (and the stream closing) before state.latest/cacheFile were actually fresh — violating \"after done, /api/atlas serves fresh data\". Fixed by deferring the 'done' broadcast until after both the in-memory snapshot swap and saveCache() complete. GET /api/repo/:id returns 200 full RepoSummary or 404. Static serving of dist/ has correct per-extension mime types, an index.html SPA fallback for unknown non-API GETs, and traversal-safe path resolution (path.normalize + containment check), verified with a raw node:http request that bypasses fetch's own client-side URL normalization (which would otherwise silently collapse \"../\" before it ever reached the server). server/index.test.js covers all of this against real server.listen(0) + fetch/node:http, using an injected fixture scanFn with small awaits mirroring the real contract; 13 tests, verified stable across 10 repeated runs after the ordering fix (an earlier version had a rare ENOTEMPTY teardown race from a test not draining a background scan before cleanup — also fixed). Full suite: 152/152 green.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-005.8utYBe\n\n Test Files  8 passed (8)\n      Tests  152 passed (152)\n   Start at  18:32:17\n   Duration  3.49s (transform 779ms, setup 0ms, import 1.49s, tests 7.08s, environment 3.56s)\n\n(server/index.test.js alone: 13 passed, re-run 10/10 stable after fixing the SSE-'done'-ordering race and a test-teardown race)"
+      },
+      {
+        "itemId": "T-008",
+        "status": "done",
+        "branch": "wave-663270-T-008",
+        "worktree": "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB",
+        "files_changed": [
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/main.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/App.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/views/Overview.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/views/Overview.test.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/components/AttentionQueue.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/components/StatsRow.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/components/Gazetteer.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/components/ScanBar.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/styles/overview.css"
+        ],
+        "summary": "Built the app shell and the five-plate Overview folio. src/main.tsx mounts the React root and pulls in tokens/overview/charts/detail CSS. src/App.tsx carries the folio masthead (small-caps serif title, hairline rules, generatedAt edition line in mono, sun/moon theme toggle), hash routing (#/ overview, #/repo/<id> -> RepoDetail with onBack, plus an explicit \"uncharted id\" state), useAtlas wiring with an injectable transport, the memoized aggregate commitDays sum, and the aggregate cross-filter day state shared between Fig. 2's Heatmap and Fig. 3's Timeline. Overview composes Fig. 1 Notices to Mariners (AttentionQueue), Fig. 2 Commit Soundings, Fig. 3 The Year's Passage, Fig. 4 Legend & Reckonings (StatsRow), Fig. 5 Gazetteer of Repositories, with ScanBar above them.\n\nTwo design decisions worth conductor review. (1) The acceptance criterion requires a no-remote reason badge in the queue, but no fixture attention entry is a no-remote repo (contract says no-remote is explicitly NOT an attention reason). I render the server-delivered attention entries first, untouched, then append informational no-remote notices below them in the snapshot's own repo order, styled through CSS.advisoryNoRemote in ink. The ranking is never disturbed and a no-remote row can never read as \"unpushed\". (2) \"Commits this month\" honestly reads 0 on the fixture, whose newest commit day is 2026-07-29 against a 2026-08-01 survey date; the tile carries the month name and a trailing-12-week sparkline so the zero is informative rather than dead.\n\nTests: 21 new cases in Overview.test.tsx, all expected values hand-computed from shared/fixtures.js and written as literals. The ordering test deliberately feeds a queue that CONTRADICTS attentionComparator and demands it render scrambled, so it can distinguish \"renders delivered order\" from \"re-sorts and happens to agree\" — the fixture's own array is pre-sorted, so rendering it proves nothing. Queue-above-heatmap DOM order is asserted with compareDocumentPosition, not left to CSS. I verified the suite actually bites by mutating the implementation five ways (client-side sort, dropped no-remote group, plate reorder, truncated progress reading) and confirming the right tests fail, then restored.\n\nI also server-rendered the folio on fixture data and screenshotted it in light, dark, scanning and narrow viewports. That caught three defects no unit test could see: the viewBox charts stretched their internal type to headline size at desktop width (Timeline's reading rendered ~20px), the progress mark smeared into a lozenge under preserveAspectRatio=\"none\" (now a vertical survey tick with a non-scaling stroke), and a naive button reset on the advisory rows would have deleted the frozen vermilion left rule and wash by CSS load order (now resets only the two borders tokens.css never speaks to). Suite went 139 -> 160, vite build clean, worktree tree clean, only the 9 scoped files committed. Note node_modules is tracked in this repo — I reverted the vitest cache file it touched and staged my 9 paths explicitly.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB\n\n\n Test Files  8 passed (8)\n      Tests  160 passed (160)\n   Start at  18:41:00\n   Duration  3.52s (transform 598ms, setup 0ms, import 1.33s, tests 8.30s, environment 4.44s)"
+      }
+    ],
+    "dead_items": [],
+    "timestamp": "1786663270"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder-T-005",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a7cc5c9ec1fac1f12",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786663313288,
+      "queuedAt": 1786663311400,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-005",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-005.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786663954607,
+      "tokens": 112376,
+      "toolCalls": 38,
+      "durationMs": 641319,
+      "resultPreview": "{\"itemId\":\"T-005\",\"status\":\"done\",\"branch\":\"wave-663270-T-005\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-005.8utYBe\",\"files_changed\":[\"server/index.js\",\"server/index.test.js\"],\"summary\":\"Built server/index.js: createServer({rootDir, cacheFile, scanFn, port, nowFn, distDir}) returns an un-listened node http.Server (distDir is an additive optional param, defaulting to <proj…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "builder-T-008",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "abd21c7359f2b2e16",
+      "model": "claude-opus-5[1m]",
+      "state": "done",
+      "startedAt": 1786663312988,
+      "queuedAt": 1786663311400,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-008",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-008.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786664501925,
+      "tokens": 196558,
+      "toolCalls": 73,
+      "durationMs": 1188937,
+      "resultPreview": "{\"itemId\":\"T-008\",\"status\":\"done\",\"branch\":\"wave-663270-T-008\",\"worktree\":\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB\",\"files_changed\":[\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/main.tsx\",\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-008.jgi2IB/src/App.tsx\",\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000…"
+    }
+  ],
+  "totalTokens": 308934,
+  "totalToolCalls": 111
+}

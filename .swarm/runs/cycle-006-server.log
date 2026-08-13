@@ -1,0 +1,15 @@
+
+> repo-atlas@0.1.0 start
+> vite build && node server/index.js
+
+vite v8.2.1 building client environment for production...
+[2Ktransforming...✓ 37 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   1.07 kB │ gzip:  0.59 kB
+dist/assets/index-CaFJeF-z.css   18.50 kB │ gzip:  3.72 kB
+dist/assets/index-DRyK1UzD.js   219.06 kB │ gzip: 68.62 kB
+
+✓ built in 74ms
+[repo-atlas] listening on http://localhost:4600
+sh: line 1: 89615 Terminated: 15          node server/index.js
