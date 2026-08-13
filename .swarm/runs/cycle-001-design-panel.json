@@ -1,0 +1,625 @@
+{
+  "summary": "Three competing design briefs + a judge",
+  "agentCount": 4,
+  "logs": [
+    "design-panel @ 1786659903 (modelPolicy: value-routing; design + judge pinned to fable/high)",
+    "judge picked C with 6 steal(s)"
+  ],
+  "result": {
+    "candidates": [
+      {
+        "brief": "MINIMAL",
+        "name": "Repo Atlas — Triage Console",
+        "summary": "A single Node process on port 4600 serves both the API and the built Vite+React SPA. It scans ~/Projects on demand into a JSON disk cache, pre-computes every domain rule server-side (attention classification, queue order, local-timezone day buckets), and ships the SPA one pre-sorted payload. The UI is two screens — overview (attention queue on top, aggregate heatmap + timeline below) and per-repo drill-down (languages/LOC, recent commits, last-touched files, branches, repo-scoped heatmap + timeline reusing the same two SVG components) — plus a Rescan button that triggers an async rescan with n/total progress and swaps data in place. One exported hook (useAtlas) owns all data flow and has the required component-mount test; scan logic is split into a pure-function domain module so the git rules are unit-testable without fixtures.",
+        "architecture": "Single repo, plain ESM JavaScript throughout. Server: node:http (no framework) serving the vite-built dist plus three JSON endpoints — GET /api/repos (in-memory cache hydrated from .atlas-cache.json at boot, so first paint is instant), POST /api/rescan (kicks off async scan, returns 202), GET /api/status ({scanning, done, total}). The scanner walks ~/Projects depth-limited, skipping node_modules, detecting .git as dir or file (worktrees), then per repo shells out to git for branch, porcelain status, ahead/behind vs @{u}, last-commit, commit history timestamps, recent commits, last-touched files, and branch list; a separate file walk (excluding node_modules/dist/.git/vendored) produces LOC-by-extension. All tricky rules live in server/domain.js as pure functions and are baked into the RepoEntry shape defined in shared/contract.js: each entry carries attention.reasons (dirty/unpushed/stale), status ('no remote' is a distinct value that can never be 'unpushed'), and a heatmap map keyed by local-timezone YYYY-MM-DD author dates; /api/repos delivers the queue already sorted (dirty > unpushed > stale, ties by most-recent activity) so no client code can reorder it wrong. Frontend: no router — App.jsx holds overview-vs-selected-repo state; useAtlas.js is the only exported hook (initial fetch, rescan POST, 500ms status polling while scanning, atomic data swap on completion); Heatmap.jsx and Timeline.jsx are hand-rolled SVG components parameterized by a commit-date series, so aggregate and per-repo views are the same components fed different slices. shared/contract.js (data shapes, status constants, API paths, day-key format, CSS class vocabulary for dynamically built regions) and src/styles.css freeze in wave 1 and are never edited after, letting all wave-2 builders merge without touching each other's files.",
+        "file_plan": [
+          {
+            "path": "package.json",
+            "purpose": "Scripts (start = vite build && node server/index.js on 4600; test = vitest run, non-interactive) and the full pinned dependency set: react, react-dom, vite, @vitejs/plugin-react, vitest, jsdom, @testing-library/react"
+          },
+          {
+            "path": "vite.config.js",
+            "purpose": "React plugin plus vitest config (jsdom environment, globals, setup file) so all wave-2 test authors inherit one working test harness"
+          },
+          {
+            "path": "index.html",
+            "purpose": "SPA entry document loading src/main.jsx"
+          },
+          {
+            "path": "shared/contract.js",
+            "purpose": "FROZEN after wave 1: JSDoc typedefs for RepoEntry and ScanStatus, status/reason string constants ('dirty'|'unpushed'|'stale'|'ok', 'no-remote'), API route paths, local-timezone YYYY-MM-DD heatmap key format, the pre-sorted-queue guarantee, and the CSS class vocabulary for every dynamically rendered region"
+          },
+          {
+            "path": "src/styles.css",
+            "purpose": "FROZEN after wave 1: single restrained palette as CSS custom properties plus every class named in the contract vocabulary — layout, queue rows, reason badges, chart containers, detail panels"
+          },
+          {
+            "path": "server/git.js",
+            "purpose": "Thin child_process git wrappers with output parsers: porcelain status, current branch, rev-list --left-right --count vs @{u} (absent upstream returns null, never a count), log timestamps/subjects, name-only for last-touched files, branch list; tolerates .git-file worktrees and empty repos"
+          },
+          {
+            "path": "server/domain.js",
+            "purpose": "Pure functions for every domain rule: dirty/unpushed/stale/ok classification (no-remote can never be unpushed), attention comparator (dirty > unpushed > stale, ties by recency), author-timestamp to local-timezone day-key bucketing, LOC extension-to-language classifier and exclusion list"
+          },
+          {
+            "path": "server/scan.js",
+            "purpose": "Depth-limited walk of ~/Projects skipping node_modules to discover repos, per-repo assembly combining git.js output + LOC file walk into contract RepoEntry objects, with a progress callback (done/total) for async status"
+          },
+          {
+            "path": "server/index.js",
+            "purpose": "node:http server on 4600: static dist serving, GET /api/repos from in-memory cache backed by .atlas-cache.json on disk, POST /api/rescan running scan.js async and updating progress, GET /api/status"
+          },
+          {
+            "path": "server/domain.test.js",
+            "purpose": "Unit tests for all rules: classification matrix incl. no-remote-never-unpushed, queue ordering with recency tie-breaks, TZ-pinned day bucketing, LOC exclusions"
+          },
+          {
+            "path": "server/scan.test.js",
+            "purpose": "Integration test building temp-dir fixture git repos (dirty, clean, stale by author date, no-upstream) and asserting discovery, classification, and pre-sorted queue end-to-end"
+          },
+          {
+            "path": "src/main.jsx",
+            "purpose": "React root mount"
+          },
+          {
+            "path": "src/App.jsx",
+            "purpose": "App shell: overview-vs-selected-repo state (no router), header with repo count and the Rescan button showing n/total progress while scanning"
+          },
+          {
+            "path": "src/useAtlas.js",
+            "purpose": "The single exported hook: initial /api/repos fetch, rescan trigger, /api/status polling while scanning, atomic data swap on completion; exposes {data, scanning, progress, rescan}"
+          },
+          {
+            "path": "src/useAtlas.test.jsx",
+            "purpose": "Component-mount test for useAtlas with mocked fetch and timers — the DoD-mandated hook mount test (useAtlas is the only exported hook)"
+          },
+          {
+            "path": "src/App.test.jsx",
+            "purpose": "Mounts the full app on a fixture payload: asserts queue renders in delivered order with reason badges, drill-down opens on click, Rescan button reflects scanning state"
+          },
+          {
+            "path": "src/components/AttentionQueue.jsx",
+            "purpose": "Renders the server-pre-sorted queue: repo name, branch, reason badges, last-commit age; click selects repo"
+          },
+          {
+            "path": "src/components/Heatmap.jsx",
+            "purpose": "Hand-rolled SVG GitHub-style 53x7 grid from a day-key count map with month labels and intensity steps; identical component serves aggregate and per-repo data"
+          },
+          {
+            "path": "src/components/Timeline.jsx",
+            "purpose": "Hand-rolled SVG commits-per-week bar timeline over 12 months; identical component serves aggregate and per-repo data"
+          },
+          {
+            "path": "src/components/RepoDetail.jsx",
+            "purpose": "Drill-down panel: language/LOC horizontal bars, recent commits, last-touched files, branch list, plus Heatmap and Timeline fed repo-scoped data"
+          },
+          {
+            "path": "src/components/charts.test.jsx",
+            "purpose": "Mount tests for Heatmap and Timeline against fixture day-count data: correct cell/bar counts, empty-data safety"
+          }
+        ],
+        "build_order": [
+          "Wave 1 (1 agent): scaffold + frozen contracts — package.json, vite.config.js, index.html, shared/contract.js, src/styles.css. After this wave these five files are never edited again.",
+          "Wave 2 (4 agents in parallel, disjoint scopes): [server engine] server/git.js, server/domain.js, server/scan.js, server/index.js, server/domain.test.js, server/scan.test.js; [app shell + data hook] src/main.jsx, src/App.jsx, src/useAtlas.js, src/useAtlas.test.jsx, src/App.test.jsx; [overview charts] src/components/AttentionQueue.jsx, src/components/Heatmap.jsx, src/components/Timeline.jsx, src/components/charts.test.jsx; [drill-down] src/components/RepoDetail.jsx.",
+          "Wave 3 (1 agent): integration only — run npm start against the real ~/Projects, verify DoD line by line (correct branch/dirty/last-commit for every repo, heatmap+timeline from real data, drill-down, rescan without restart), fix seam bugs, npm test fully green."
+        ],
+        "risks": [
+          "Git edge cases in the real ~/Projects tree are the top integration risk: worktrees (.git is a file, and this very directory tree contains them), detached HEADs, repos with zero commits, and branches with no upstream. server/git.js must return null upstream (not an error and not 0-ahead) or the 'no remote is never unpushed' rule silently breaks in wave 3.",
+          "Ahead/behind parsing: rev-list --left-right --count output order is easy to invert; an inverted parse makes behind-only repos show as unpushed. Needs an explicit fixture test in scan.test.js.",
+          "LOC walk cost: dozens of repos with large trees can blow the rescan-with-progress budget if the exclusion list (node_modules, dist, .git, vendored) is applied per-file instead of pruning directories at walk time. Prune, don't filter.",
+          "Timezone bucketing tests are flaky unless the vitest run pins TZ; author-date-to-local-day is the one rule where a passing test on the build machine can still mislabel days for the user if implemented via UTC string slicing.",
+          "The polling hook's mount test (mocked fetch + timers in jsdom) is the most fiddly test in the plan — act() warnings and unresolved-promise leaks can leave vitest hanging, which violates the non-interactive npm test requirement.",
+          "npm start couples vite build to server launch; if wave 3 skips a rebuild after a frontend fix, it validates a stale dist. The integration agent must treat build-then-serve as one atomic step.",
+          "Contract drift: if any wave-2 agent edits shared/contract.js or styles.css instead of conforming to them, the zero-conflict merge property is lost. The frozen-after-wave-1 rule is load-bearing."
+        ],
+        "delight": [
+          "Open localhost:4600 and the first paint — served from the disk cache in well under 2s — is already the answer: the repos with uncommitted work sit at the top with plain reason badges, before any chart draws.",
+          "Hit Rescan and keep working: the button ticks 7/34, 8/34 across the real repo set, and the page swaps to fresh data in place — no restart, no blank state.",
+          "Click any repo and the exact same heatmap and timeline you just read in aggregate redraw scoped to that one project — a year of one repo's life in the same visual language, because they are literally the same two SVG components.",
+          "Repos without a remote say 'no remote' instead of falsely nagging 'unpushed' — the queue never cries wolf, which is what makes it trustworthy enough to act on."
+        ]
+      },
+      {
+        "brief": "AMBITIOUS",
+        "name": "Repo Atlas — Mission Control",
+        "summary": "A local mission-control dashboard that opens in under 2 seconds from a JSON cache and immediately answers \"what needs my attention\": a ranked queue of dirty, unpushed, and stale repos with plain-language reason badges and inline 90-day sparklines, backed by a hand-rolled SVG 12-month heatmap and activity timeline that cross-filter each other. Rescan streams per-repo progress live over SSE so rows settle in as they're scanned, a Cmd+K palette and j/k keys make every repo two keystrokes away, and per-repo drill-down shows languages, LOC, recent commits, last-touched files, and branches — all from local git only, read-only, no database.",
+        "architecture": "Two processes in one repo, joined by a frozen contract module. A small Node HTTP server (port 4600) serves the built Vite+React SPA and four endpoints: GET /api/atlas (last cached Snapshot, instant), GET /api/repo/:id (drill-down detail), POST /api/rescan (kicks an async scan job), GET /api/rescan/events (SSE stream of per-repo progress events; client falls back to polling). The scanner walks ~/Projects depth-limited (skipping node_modules/dist/.git/vendored), runs git subprocesses per repo through a concurrency pool (branch, status --porcelain for dirty, rev-list vs @{u} for ahead/behind with no-upstream mapped to \"no_remote\", log with author dates for history/heatmap), classifies LOC by extension, and writes an atomic JSON snapshot cache to disk — boot loads the cache so first paint never waits on git. All domain rules live server-side and are encoded into the entry data shape per the playbook: each RepoEntry ships with computed attention reasons, a rank key from the frozen comparator (dirty > unpushed > stale, ties by recency), pre-bucketed local-timezone commit-per-day counts, and status enums — the client renders, never re-derives. shared/contract.js is written in wave 0 and never edited again: typedefs, status enums, the attention comparator, the CSS render-vocabulary class names for dynamically built regions, and design tokens; shared/fixtures.js is the single canonical Snapshot used by every client test, so server and client agents build against identical shapes and merge without touching each other's files. All charts are hand-rolled SVG components that take fixture-shaped props — no chart library. Vitest (jsdom + testing-library) covers a component-mount test for every exported hook, contract-lock tests, real-tmp-git-repo scanner tests, and endpoint/SSE lifecycle tests.",
+        "file_plan": [
+          {
+            "path": "package.json",
+            "purpose": "Dependencies and scripts: npm start = vite build + node server on 4600; npm test = vitest run (non-interactive)"
+          },
+          {
+            "path": "vite.config.js",
+            "purpose": "Vite React build + vitest jsdom/test config + dev proxy for /api"
+          },
+          {
+            "path": "shared/contract.js",
+            "purpose": "FROZEN after wave 0: RepoEntry/Snapshot/RescanEvent shapes, status enums (dirty/unpushed/stale/clean/no_remote), attention comparator, CSS render-vocabulary class names for dynamic regions, design tokens"
+          },
+          {
+            "path": "shared/fixtures.js",
+            "purpose": "Canonical fixture Snapshot conforming to contract — the only test-data source for all client tests"
+          },
+          {
+            "path": "shared/contract.test.js",
+            "purpose": "Locks enum values, comparator ordering (dirty > unpushed > stale, ties by recency), and fixture validity against the contract"
+          },
+          {
+            "path": "server/discover.js",
+            "purpose": "Depth-limited walk of ~/Projects finding .git dirs; skips node_modules, dist, vendored dirs"
+          },
+          {
+            "path": "server/gitfacts.js",
+            "purpose": "Per-repo git subprocess calls: branch, porcelain dirty check, ahead/behind vs @{u} (no upstream => no_remote), commit log with author dates"
+          },
+          {
+            "path": "server/loc.js",
+            "purpose": "Extension-based language/LOC breakdown with exclusion list (node_modules, dist, .git, vendored)"
+          },
+          {
+            "path": "server/scanner.js",
+            "purpose": "Orchestrates discover+gitfacts+loc through a concurrency pool; emits per-repo progress events; assembles Snapshot with pre-computed attention reasons, rank keys, and local-tz per-day commit buckets"
+          },
+          {
+            "path": "server/cache.js",
+            "purpose": "JSON snapshot cache on disk: load on boot, atomic write after scan"
+          },
+          {
+            "path": "server/index.js",
+            "purpose": "HTTP server on 4600: static dist, GET /api/atlas, GET /api/repo/:id, POST /api/rescan (async job), GET /api/rescan/events (SSE progress)"
+          },
+          {
+            "path": "server/scanner.test.js",
+            "purpose": "Builds throwaway git repos in tmp dirs; asserts dirty/ahead/stale/no_remote classification, attention ordering, and heatmap day bucketing"
+          },
+          {
+            "path": "server/index.test.js",
+            "purpose": "Endpoint tests with an injected fixture scanner: cached atlas load, rescan job lifecycle, SSE event ordering, detail route"
+          },
+          {
+            "path": "client/index.html",
+            "purpose": "SPA entry page"
+          },
+          {
+            "path": "client/src/main.jsx",
+            "purpose": "React mount + theme bootstrap (system preference + persisted override)"
+          },
+          {
+            "path": "client/src/App.jsx",
+            "purpose": "Hash routing (overview / repo/:id) and global keyboard-event shell"
+          },
+          {
+            "path": "client/src/api/hooks.js",
+            "purpose": "useAtlas (instant cached load + refresh), useRescan (SSE with injectable transport + polling fallback), useTheme, useKeyboardNav"
+          },
+          {
+            "path": "client/src/api/hooks.test.jsx",
+            "purpose": "Component-mount test for every exported hook, using mock transports — satisfies the definition-of-done hook rule"
+          },
+          {
+            "path": "client/src/charts/Heatmap.jsx",
+            "purpose": "Hand-rolled SVG 12-month GitHub-style heatmap; day cells clickable, emitting a date filter"
+          },
+          {
+            "path": "client/src/charts/Timeline.jsx",
+            "purpose": "Hand-rolled SVG activity timeline, aggregate + per-repo series; honors the heatmap's day filter"
+          },
+          {
+            "path": "client/src/charts/Sparkline.jsx",
+            "purpose": "Inline 90-day SVG commit sparkline for attention-queue rows"
+          },
+          {
+            "path": "client/src/charts/charts.test.jsx",
+            "purpose": "Render tests for all three charts from shared fixtures, including empty-data cases"
+          },
+          {
+            "path": "client/src/views/Overview.jsx",
+            "purpose": "First screen: attention queue on top, stats row, heatmap + timeline below; wires day-filter cross-linking"
+          },
+          {
+            "path": "client/src/components/AttentionQueue.jsx",
+            "purpose": "Ranked rows with reason badges (dirty/unpushed/stale) and sparklines; renders server-provided order, never re-sorts"
+          },
+          {
+            "path": "client/src/components/StatsRow.jsx",
+            "purpose": "Aggregate stats: total repos, commits this month, most-active repo"
+          },
+          {
+            "path": "client/src/components/RescanButton.jsx",
+            "purpose": "Rescan trigger with streaming progress bar and per-repo settle states driven by SSE events"
+          },
+          {
+            "path": "client/src/views/RepoDetail.jsx",
+            "purpose": "Drill-down: language/LOC bars, recent commits, last-touched files, branch list, per-repo timeline"
+          },
+          {
+            "path": "client/src/components/CommandPalette.jsx",
+            "purpose": "Cmd+K fuzzy repo jump plus filter/sort (activity, size, staleness)"
+          },
+          {
+            "path": "client/src/styles/tokens.css",
+            "purpose": "Restrained palette, spacing, and type tokens for both light and dark themes"
+          },
+          {
+            "path": "client/src/styles/app.css",
+            "purpose": "Layout and component styles keyed to the contract's render-vocabulary class names"
+          },
+          {
+            "path": "client/src/views/views.test.jsx",
+            "purpose": "Mount tests for Overview and RepoDetail composed from shared fixtures"
+          }
+        ],
+        "build_order": [
+          "Wave 0 — single agent, contract freeze: package.json, vite.config.js, shared/contract.js, shared/fixtures.js, shared/contract.test.js, client/src/styles/tokens.css. After this wave these files are never edited again.",
+          "Wave 1 — four parallel agents on disjoint scopes: (A) server data layer: discover.js, gitfacts.js, loc.js, scanner.js, cache.js, scanner.test.js; (B) server HTTP: index.js, index.test.js against an injected fixture scanner; (C) client shell + hooks: index.html, main.jsx, App.jsx, api/hooks.js, api/hooks.test.jsx, RescanButton.jsx; (D) SVG charts: Heatmap.jsx, Timeline.jsx, Sparkline.jsx, charts.test.jsx — all four code purely against the frozen contract and fixtures.",
+          "Wave 2 — three parallel agents, composing wave-1 pieces: (E) Overview.jsx, AttentionQueue.jsx, StatsRow.jsx, app.css, Overview half of views.test.jsx; (F) RepoDetail.jsx + its half of views.test.jsx; (G) CommandPalette.jsx + keyboard-nav wiring + theme polish. Delighters (day-click cross-filter, palette, sparklines-in-rows) all land here, after must-haves are safe in wave 1.",
+          "Wave 3 — single integration agent: run the real server against ~/Projects, verify cached first paint, live-streaming rescan, cross-filter, and drill-down end to end; full vitest suite green; fix seams only, no new features."
+        ],
+        "risks": [
+          "Git edge cases in gitfacts.js are the hardest correctness surface: detached HEAD, empty repos with zero commits, repos with an upstream that no longer exists, and the spec's no-upstream => 'no remote' (never 'unpushed') rule. Mitigation is real-tmp-repo tests in scanner.test.js covering each case, but an unanticipated repo state under the real ~/Projects can still surface in wave 3.",
+          "Heatmap timezone bucketing is ambiguous in practice: 'author date in local timezone' requires forcing git log date formatting to the server's local tz rather than the committer's recorded offset, or day counts drift at boundaries. The bucketing must live in scanner.js (server-side, tested) so both charts consume identical pre-bucketed data — if any client code re-buckets, aggregate and per-repo views will disagree.",
+          "Scan latency across dozens of repos: LOC counting is the expensive part and can blow the sub-2s feel if done naively. The design depends on the cache-first boot (never scan on GET /api/atlas) and the concurrency-pooled async rescan; if agent A skips the pool or the atomic cache write, first load or rescan will feel broken even though data is correct.",
+          "SSE is the riskiest integration seam: EventSource doesn't exist in jsdom, so useRescan must take an injectable transport with a polling fallback, and server/index.test.js must assert event ordering. If agents B and C interpret RescanEvent differently, live progress silently degrades — the frozen RescanEvent shape in shared/contract.js is the only defense, so wave 0 must fully specify it (event types, terminal event, error event).",
+          "Wave 2 styling depends on wave-1 components emitting exactly the contract's render-vocabulary class names; any improvised class name in Heatmap/AttentionQueue leaves unstyled or mis-styled regions that only show up at integration. Contract.test.js can lock the vocabulary list but not enforce usage — wave 3 needs an explicit visual pass.",
+          "npm start couples vite build to server boot; a client type/lint failure at build time blocks the whole definition-of-done command even if the server is healthy. Wave 3 must run npm start cold, not just vitest."
+        ],
+        "delight": [
+          "First paint in well under 2 seconds from the disk cache, and the very first line of the screen is a verdict, not wallpaper: '3 repos need attention' with each row saying why in words — 'dirty: 4 files', 'unpushed: 2 commits', 'stale: 127 days' — ranked so the most urgent is always row one.",
+          "Hitting Rescan doesn't freeze anything: a progress bar fills as SSE events stream in and each repo row visibly settles from pending to fresh as its scan completes — the dashboard feels alive, and you can watch a dirty flag appear the moment the scanner reaches that repo.",
+          "Clicking any day cell on the 12-month heatmap cross-filters the timeline and surfaces that day's commits — 'what was I doing on March 12th' answered in one click, with both charts drawn as crisp hand-rolled SVG in a restrained two-hue palette.",
+          "Every attention-queue row carries a 90-day inline sparkline, so active-but-dirty and abandoned-and-dirty read differently at a glance without a single extra click.",
+          "Cmd+K opens a fuzzy palette that jumps to any repo's drill-down in two keystrokes; j/k/enter walk the queue; the whole dashboard is drivable without touching the mouse.",
+          "Drill-down tells a repo's story on one calm screen: language bars, recent commits, the files you touched last, and every branch — the 'wait, what state did I leave this in?' question answered before the terminal even opens."
+        ]
+      },
+      {
+        "brief": "TASTE-FORWARD",
+        "name": "Repo Atlas — Survey Folio",
+        "summary": "Repo Atlas rendered as a cartographic survey folio: the dashboard is a set of numbered engraved plates (\"Fig. 1 — Notices\", \"Fig. 2 — Commit Soundings\") on cream paper (night-chart-room dark theme), with a pre-ranked attention queue of advisories on top, hand-rolled SVG heatmap/timeline/strata charts below, and a per-repo drill-down plate. A small Node server on :4600 surveys ~/Projects with git plumbing, serves a JSON cache instantly, and streams async rescan progress as a moving sounding line. Every must-have lands: full depth-limited scan with branch/dirty/ahead-behind/history/LOC, attention-first overview, aggregate and per-repo heatmap+timeline, drill-down, and live rescan without restart — plus search/sort, themes, stats row, and j/k keyboard navigation.",
+        "architecture": "Visual identity first, and the code is organized to protect it. The identity: an early-20th-century survey atlas. One paper surface (warm cream light / indigo-black dark), near-black ink, a single vermilion accent reserved exclusively for attention states, hairline rules, small-caps serif plate captions, monospace tabular figures for all data. Every panel on screen is a Plate — a frozen component that renders the ruled frame, figure number, and caption (\"Fig. 3 — Gazetteer of Repositories\"). Charts are pure hand-rolled SVG using engraving idioms: ink-density cells for the heatmap, an impulse/area \"sounding\" line for the timeline, hatched SVG-pattern strata for the language/LOC bar so it reads even in monochrome. No chart or CSS library; the entire look lives in tokens.css + Plate.tsx.\n\nSystem shape: a dependency-light Node server (node:http + child_process git plumbing) on port 4600 serves the built Vite+React SPA from /dist plus a JSON API. GET /api/atlas returns the last snapshot from a disk cache (.atlas-cache.json) so first paint is instant (<2s taste bar); POST /api/rescan kicks an async survey with a bounded concurrency pool over repos, and GET /api/scan-events (SSE) streams {phase, repo, done, total} progress that the UI renders as a sweeping sounding line — data swaps in atomically when the survey completes, no restart. GET /api/repo/:id serves drill-down detail (recent commits, last-touched files, branches, per-repo daily buckets).\n\nContract-freeze-first (per playbook): wave 0 lands shared/contract.ts (all data shapes, API route names, SSE event shape, a dayKey(date) local-timezone bucketing helper), tokens.css (palette, type scale, and the full render-vocabulary class list for dynamic regions: .plate, .plate-caption, .advisory, .advisory--dirty/--unpushed/--stale/--no-remote, .gazetteer-row, .sounding, etc.), and Plate.tsx — then those files are never edited again. Tricky domain rules are encoded in the data shape so downstream code cannot get them wrong: the server emits attention as a pre-ranked AttentionEntry[] (dirty > unpushed > stale, ties by recency, computed in server/attention.js) and each repo carries explicit flags {dirty, aheadBy, behindBy, upstream: 'tracked'|'none', staleDays} with 'no remote' as a distinct state that can never surface as 'unpushed'. Heatmap buckets are keyed by author-date local-timezone dayKey at the server, so charts just paint.\n\nFrontend: React SPA with two views — Overview (Fig. 1 Notices attention queue, Fig. 2 aggregate heatmap, Fig. 3 timeline, Fig. 4 stats Legend, Fig. 5 Gazetteer table with search/sort) and RepoDetail (per-repo heatmap/timeline, language strata, commits, touched files, branches), navigated by hash route so drill-down is linkable. Three exported hooks (useAtlas, useKeyboardNav, useTheme) each ship a component-mount test; charts develop against a fixtures module so the chart agent never needs the server. Tests: vitest + Testing Library for components/hooks; server tests build real throwaway git repos in temp dirs and assert dirty/ahead/stale/no-remote classification and attention ordering.",
+        "file_plan": [
+          {
+            "path": "package.json",
+            "purpose": "Scripts (start = vite build + node server/index.js on :4600; test = vitest run) and minimal deps (react, vite, vitest, @testing-library/react); wave-0 scaffold"
+          },
+          {
+            "path": "vite.config.ts",
+            "purpose": "Vite + React + vitest (jsdom) config; dev proxy of /api to :4600; wave-0 scaffold"
+          },
+          {
+            "path": "index.html",
+            "purpose": "SPA mount page with inline theme-boot script (reads saved theme before first paint, no flash); wave-0 scaffold"
+          },
+          {
+            "path": "shared/contract.ts",
+            "purpose": "FROZEN wave-0 contract: RepoSummary, AttentionEntry (pre-ranked, reason enum), HeatmapDay, TimelineBucket, RepoDetail, ScanEvent shapes; API route constants; dayKey() local-timezone bucketing helper; never edited after wave 0"
+          },
+          {
+            "path": "src/styles/tokens.css",
+            "purpose": "FROZEN wave-0 design tokens: paper/ink/vermilion palette for both themes, serif small-caps caption + monospace data type scale, hairline rules, and the complete render-vocabulary class list for all dynamically built DOM (advisory, gazetteer-row, sounding, plate variants)"
+          },
+          {
+            "path": "src/components/Plate.tsx",
+            "purpose": "FROZEN wave-0 Plate frame: ruled border, auto figure number, small-caps caption slot; every panel in the app renders inside it — this file is the screenshot signature"
+          },
+          {
+            "path": "server/index.js",
+            "purpose": "node:http server on 4600: serves /dist statically, GET /api/atlas (cache-first), POST /api/rescan (async), GET /api/scan-events (SSE progress), GET /api/repo/:id"
+          },
+          {
+            "path": "server/scan.js",
+            "purpose": "Depth-limited walk of ~/Projects (skips node_modules/dist/.git/vendored dirs, handles .git-file worktrees), bounded-concurrency survey orchestration, atomic snapshot assembly"
+          },
+          {
+            "path": "server/gitFacts.js",
+            "purpose": "Per-repo git plumbing: branch, status --porcelain dirty, ahead/behind via rev-list against local upstream (no fetch; upstream-missing => 'none'), 12-month commit log with author dates, last-touched files, branch list"
+          },
+          {
+            "path": "server/loc.js",
+            "purpose": "Language/LOC classifier by extension with exclusion rules and per-repo byte/file caps so huge repos cannot stall a survey"
+          },
+          {
+            "path": "server/attention.js",
+            "purpose": "Attention ranking engine: emits pre-ordered AttentionEntry[] (dirty > unpushed > stale, ties by most-recent activity) plus per-repo flags; the single home of the domain-rule ordering"
+          },
+          {
+            "path": "server/cache.js",
+            "purpose": "JSON disk cache (.atlas-cache.json): load-on-boot, atomic write-and-swap after survey completes"
+          },
+          {
+            "path": "server/scan.test.js",
+            "purpose": "Vitest: builds throwaway git repos in temp dirs (dirty, unpushed, stale, no-remote, worktree) and asserts classification, ahead/behind, and skip rules"
+          },
+          {
+            "path": "server/attention.test.js",
+            "purpose": "Vitest: attention ordering and tie-breaks, 'no remote' never classified 'unpushed', stale >90d boundary"
+          },
+          {
+            "path": "src/charts/Heatmap.tsx",
+            "purpose": "Hand-rolled SVG 12-month GitHub-style heatmap: ink-density cells, month labels along top rule, hover renders a chart-margin annotation (date + count) instead of a floating tooltip"
+          },
+          {
+            "path": "src/charts/Timeline.tsx",
+            "purpose": "Hand-rolled SVG activity 'sounding' line: aggregate or per-repo weekly buckets, impulse+area engraving style, vermilion marker on the most recent bucket"
+          },
+          {
+            "path": "src/charts/Sparkline.tsx",
+            "purpose": "Tiny inline SVG sparkline for Gazetteer rows and stats Legend"
+          },
+          {
+            "path": "src/charts/Strata.tsx",
+            "purpose": "Language/LOC breakdown as a hatched-pattern geological cross-section bar (SVG patterns, legible in monochrome)"
+          },
+          {
+            "path": "src/charts/fixtures.ts",
+            "purpose": "Deterministic mock HeatmapDay/TimelineBucket/LOC data so the chart agent builds and tests without the server"
+          },
+          {
+            "path": "src/charts/charts.test.tsx",
+            "purpose": "Vitest render tests: correct cell/bucket counts, month label math, empty-data and single-repo edge cases"
+          },
+          {
+            "path": "src/hooks/useAtlas.ts",
+            "purpose": "Data hook: cache-first fetch of /api/atlas, rescan trigger, SSE scan-progress subscription, atomic data swap on survey completion"
+          },
+          {
+            "path": "src/hooks/useKeyboardNav.ts",
+            "purpose": "j/k row movement across Notices and Gazetteer, Enter opens drill-down, Esc back, / focuses search, r rescan, t theme"
+          },
+          {
+            "path": "src/hooks/useTheme.ts",
+            "purpose": "Day-chart / night-chart-room theme toggle persisted to localStorage, syncs data-theme attribute"
+          },
+          {
+            "path": "src/hooks/hooks.test.tsx",
+            "purpose": "Component-mount test for every exported hook (playbook requirement) with fetch/EventSource mocked"
+          },
+          {
+            "path": "src/main.tsx",
+            "purpose": "SPA entry: mounts App, imports tokens.css"
+          },
+          {
+            "path": "src/App.tsx",
+            "purpose": "Hash router between Overview and RepoDetail, page masthead ('REPO ATLAS — A Survey of ~/Projects', survey date), theme root"
+          },
+          {
+            "path": "src/views/Overview.tsx",
+            "purpose": "The first screen: composes Fig. 1 Notices, Fig. 2 heatmap, Fig. 3 timeline, Fig. 4 Legend stats, Fig. 5 Gazetteer — attention strictly above activity"
+          },
+          {
+            "path": "src/components/AttentionQueue.tsx",
+            "purpose": "Fig. 1 'Notices': renders the server's pre-ranked AttentionEntry[] as typeset advisory lines with engraved reason glyphs (dirty/unpushed/stale) and vermilion accents"
+          },
+          {
+            "path": "src/components/StatsRow.tsx",
+            "purpose": "Fig. 4 'Legend': total repos, commits this month, most-active repo, dirty/unpushed/stale counts as tabular-figure stat blocks"
+          },
+          {
+            "path": "src/components/Gazetteer.tsx",
+            "purpose": "Fig. 5 repo index table: name, branch, state glyphs, last commit, sparkline; toolbar with search filter and sort by activity/size/staleness"
+          },
+          {
+            "path": "src/components/ScanBar.tsx",
+            "purpose": "Rescan button + SSE-driven survey progress: thin sounding line sweeping the masthead with 'surveying <repo> (12/47)' ticker; data swaps in live"
+          },
+          {
+            "path": "src/views/RepoDetail.tsx",
+            "purpose": "Drill-down plate set for one repo: per-repo heatmap + timeline, Strata LOC, composed with CommitLog/TouchedFiles/BranchList"
+          },
+          {
+            "path": "src/components/CommitLog.tsx",
+            "purpose": "Recent commits as a ledger: hash, author date, subject in monospace with hanging rules"
+          },
+          {
+            "path": "src/components/TouchedFiles.tsx",
+            "purpose": "Last-touched files list from the drill-down payload"
+          },
+          {
+            "path": "src/components/BranchList.tsx",
+            "purpose": "Branch list with current-branch marker and upstream/no-remote state"
+          },
+          {
+            "path": "src/styles/overview.css",
+            "purpose": "Overview-scope styles using only frozen token/vocabulary classes; owned by the shell agent"
+          },
+          {
+            "path": "src/styles/detail.css",
+            "purpose": "Drill-down-scope styles using only frozen token/vocabulary classes; owned by the detail agent"
+          },
+          {
+            "path": "src/styles/charts.css",
+            "purpose": "Chart-scope styles (annotation text, hover states); owned by the charts agent"
+          },
+          {
+            "path": "README.md",
+            "purpose": "Run/test instructions, screenshot, cache location, API summary; wave-2 integration agent"
+          }
+        ],
+        "build_order": [
+          "Wave 0 (single agent, sequential, then FROZEN): package.json + vite.config.ts + index.html scaffold; shared/contract.ts (all data shapes incl. pre-ranked attention, SSE event shape, dayKey helper, API routes); src/styles/tokens.css (palette, type, full render-vocabulary classes); src/components/Plate.tsx. Nothing in wave 1 may edit these files.",
+          "Wave 1 — Agent A (server): server/index.js, scan.js, gitFacts.js, loc.js, attention.js, cache.js + scan.test.js, attention.test.js against temp-dir fixture repos",
+          "Wave 1 — Agent B (charts): src/charts/Heatmap.tsx, Timeline.tsx, Sparkline.tsx, Strata.tsx, fixtures.ts, charts.test.tsx, src/styles/charts.css — built entirely against fixtures, no server dependency",
+          "Wave 1 — Agent C (shell + overview): src/main.tsx, App.tsx, views/Overview.tsx, components/AttentionQueue.tsx, StatsRow.tsx, Gazetteer.tsx, ScanBar.tsx, hooks/useAtlas.ts, useKeyboardNav.ts, useTheme.ts, hooks.test.tsx, src/styles/overview.css — uses chart components by frozen prop types even before B lands",
+          "Wave 1 — Agent D (drill-down): src/views/RepoDetail.tsx, components/CommitLog.tsx, TouchedFiles.tsx, BranchList.tsx, src/styles/detail.css",
+          "Wave 2 (single integration agent): run against the real ~/Projects tree; verify cold-scan progress UX and <2s cached load; keyboard-nav and theme audit across both views; visual pass enforcing tokens-only styling (no ad-hoc colors); README.md; full vitest sweep green"
+        ],
+        "risks": [
+          "Git edge cases in the real ~/Projects tree will break naive plumbing: worktrees (.git is a file, and this user demonstrably uses them), detached HEAD, empty repos with zero commits, branches with deleted upstreams. server/gitFacts.js must treat every git call as fallible per-repo and degrade to a partial RepoSummary rather than failing the whole scan; scan.test.js must include a worktree and an empty-repo fixture or this ships broken.",
+          "Cold-scan wall time: 12 months of git log plus LOC classification across dozens of repos, serially, can take minutes. The design depends on bounded-concurrency child processes and LOC file/byte caps; if Agent A skips the concurrency pool, the first-run experience misses the <2s taste bar and the async-progress story collapses into a spinner.",
+          "The SSE progress seam between server/index.js and useAtlas is the classic cross-agent integration break: both sides are built from the frozen ScanEvent shape without ever talking. If wave 0 under-specifies it (terminal event, reconnect behavior, atomic swap signal), wave 2 burns the night reconciling.",
+          "Heatmap date math: author-date local-timezone bucketing plus 53-week grid alignment and month-label placement is fiddly and produces silent off-by-one-day/column bugs. Mitigation is dayKey() living in the frozen contract and chart tests asserting exact cell counts against fixtures — but only if both agents actually use dayKey rather than reimplementing.",
+          "'Unpushed' vs 'no remote' misclassification: rev-list against a missing upstream errors in ways easy to swallow into aheadBy=0 or, worse, a false 'unpushed'. The contract makes upstream a three-state field precisely so attention.test.js can pin this; the test is load-bearing, not optional.",
+          "Aesthetic drift: four parallel builders each improvising CSS yields exactly the generic admin template the design forbids. The tokens + render-vocabulary + Plate freeze is the guardrail, but wave 2 needs an explicit tokens-only audit (grep for raw hex values outside tokens.css) or the single-screenshot identity dies by a thousand ad-hoc styles.",
+          "npm start ambiguity: 'vite build then node server' means a stale dist can mask new frontend work during the night; builders must rebuild before verifying, and the definition-of-done check must run from a clean build."
+        ],
+        "delight": [
+          "Open the page and the top plate is 'Fig. 1 — Notices': a typeset column of advisories ('SWARM — uncommitted changes, touched today', 'homeforge — 3 commits unpushed') with engraved reason glyphs and the only vermilion on the page. The first second answers 'what needs my attention', not commit wallpaper.",
+          "The whole dashboard reads as a survey folio — masthead 'REPO ATLAS: A Survey of ~/Projects', ruled numbered plates, small-caps serif captions, monospace tabular figures on cream paper. One screenshot is unmistakably this product and nothing else.",
+          "Hitting 'r' starts a survey, not a spinner: a hairline sounding line sweeps under the masthead while a ticker reads 'surveying prompt-spark (12/47)…', and when it completes the plates swap to fresh data in place — server never restarted, page never reloaded.",
+          "Hovering the heatmap writes the date and commit count into the plate's margin like a chart annotation — no floating tooltip chrome anywhere in the app.",
+          "A repo's language breakdown is a geological cross-section: hatched SVG strata you could read on a photocopier, with LOC counts set as depth labels.",
+          "j/k walks the Notices and the Gazetteer like an instrument, Enter drops into the repo's own plate set (its personal heatmap, sounding line, commit ledger), Esc surfaces back — hands never leave the keyboard.",
+          "Toggle 't' and the folio becomes the night chart room: indigo-black paper, phosphor-cream ink, same plates, same vermilion — a second look, not a second design."
+        ]
+      }
+    ],
+    "judge": {
+      "scores": [
+        {
+          "candidate": "A",
+          "must_haves": 9,
+          "buildability": 9,
+          "value": 7,
+          "coherence": 9,
+          "depth": 4,
+          "total": 38
+        },
+        {
+          "candidate": "B",
+          "must_haves": 7,
+          "buildability": 7,
+          "value": 8,
+          "coherence": 8,
+          "depth": 8,
+          "total": 38
+        },
+        {
+          "candidate": "C",
+          "must_haves": 10,
+          "buildability": 8,
+          "value": 9,
+          "coherence": 9,
+          "depth": 7,
+          "total": 43
+        }
+      ],
+      "winner": "C",
+      "rationale": "C wins on must-have completeness plus depth without sacrificing buildability. Must-haves: C is the only candidate that visibly satisfies the DoD line \"every git repo under ~/Projects is listed\" — its Fig. 5 Gazetteer table lists all repos with branch/state/last-commit, alongside the ranked Notices queue, aggregate + per-repo heatmap/timeline, full drill-down (CommitLog, TouchedFiles, BranchList, Strata LOC), and SSE-driven rescan; it also lands all four nice-to-haves (search/sort, themes, stats row, keyboard nav). B misses that DoD line: its overview shows only attention repos (\"ranked queue of dirty, unpushed, and stale repos\") and there is no repo table anywhere in the file_plan — clean/fresh repos are reachable only through a hidden Cmd+K palette, which is a listing miss (must_haves 7). A covers the must-haves (its contract's 'ok' status implies the queue carries all repos) but ships zero nice-to-haves — no search, no keyboard nav, no theme — which for an audience of \"dozens of repos\" hurts value and caps depth: two spartan screens whose every use is the same skeleton (depth 4). Buildability: A is cleanest (9) — smallest surface, frozen contract, one hook, disjoint wave-2 scopes. B has a concrete conflict: agents E and F each write \"half of views.test.jsx\" — two parallel agents editing one file — plus four sequential waves and the SSE seam (7). C's four wave-1 agents own disjoint files including per-agent CSS scopes (overview.css/detail.css/charts.css), but agent C's scope is heavy (shell + overview + 3 hooks + 4 components) and its Overview imports chart files agent B is writing simultaneously, and mixed .js server importing shared/contract.ts (dayKey) is an unaddressed Node/TS seam (8). Depth: B leads slightly (cross-filter, palette, sparklines, 8) with C close behind (keyboard-driven Gazetteer, search/sort, hover annotations, dual themes that are \"a second look, not a second design\", 7). Coherence: A and C both 9 — C's single survey-folio identity enforced by a frozen Plate component and tokens-only audit is the strongest anti-drift design of the three. On totals A and B tie at 38 and C clears both at 43; per the tiebreak instruction the buildable A would beat B, but neither reaches C.",
+      "steals": [
+        {
+          "from": "B",
+          "what": "Heatmap day-click cross-filter: clicking a day cell filters the timeline and surfaces that day's commits ('what was I doing on March 12th') — graft onto C's Fig. 2/Fig. 3 plates as a margin-annotation interaction."
+        },
+        {
+          "from": "B",
+          "what": "Injectable transport in the SSE hook with a polling fallback — EventSource does not exist in jsdom, so C's useAtlas should take a transport parameter so hooks.test.tsx mounts cleanly and the UI degrades gracefully if SSE drops."
+        },
+        {
+          "from": "B",
+          "what": "A canonical shared fixture Snapshot module as the single test-data source for all client tests (C only has chart-level fixtures); plus a contract-lock test asserting enum values and comparator ordering never drift."
+        },
+        {
+          "from": "A",
+          "what": "An explicit fixture test pinning the rev-list --left-right --count parse order — an inverted parse makes behind-only repos show as 'unpushed', silently breaking the attention queue's most trusted signal."
+        },
+        {
+          "from": "A",
+          "what": "Pin TZ in the vitest config for the author-date day-bucketing tests — otherwise a UTC-string-slicing implementation passes on the build machine while mislabeling days for the user."
+        },
+        {
+          "from": "B",
+          "what": "Cmd+K fuzzy repo-jump palette layered on top of C's j/k navigation — two keystrokes to any repo's drill-down beats scrolling the Gazetteer once the repo count is in the dozens."
+        }
+      ]
+    }
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Design"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Judge"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "design-minimal",
+      "phaseIndex": 1,
+      "phaseTitle": "Design",
+      "agentId": "a20ec4cd746ca4c4b",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786659944458,
+      "queuedAt": 1786659942906,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Repo Atlas — Triage Console",
+      "promptPreview": "You are one of three competing designers on an overnight autonomous\nbuild. You see only your own brief. Produce a complete design\ncandidate for the spec below.\n\nYour brief: MINIMAL. Design the smallest coherent product that\nsatisfies EVERY must-have in the spec, and nothing else. Cut every\ndelighter that does not fall out of the core design for free. The win\ncondition is: nothing left to remove, n…",
+      "lastProgressAt": 1786660075974,
+      "tokens": 23984,
+      "toolCalls": 1,
+      "durationMs": 131516,
+      "resultPreview": "{\"name\":\"Repo Atlas — Triage Console\",\"summary\":\"A single Node process on port 4600 serves both the API and the built Vite+React SPA. It scans ~/Projects on demand into a JSON disk cache, pre-computes every domain rule server-side (attention classification, queue order, local-timezone day buckets), and ships the SPA one pre-sorted payload. The UI is two screens — overview (attention queue on top, …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "design-ambitious",
+      "phaseIndex": 1,
+      "phaseTitle": "Design",
+      "agentId": "a16e409dc48080c76",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786659944396,
+      "queuedAt": 1786659942906,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Repo Atlas — Mission Control",
+      "promptPreview": "You are one of three competing designers on an overnight autonomous\nbuild. You see only your own brief. Produce a complete design\ncandidate for the spec below.\n\nYour brief: AMBITIOUS. Design the version that makes the must-haves\nSING, plus the highest-leverage delighters — the features that turn a\ncheckbox demo into something people show their friends. But it must\nstill be buildable overnight by p…",
+      "lastProgressAt": 1786660058636,
+      "tokens": 23984,
+      "toolCalls": 1,
+      "durationMs": 114240,
+      "resultPreview": "{\"name\":\"Repo Atlas — Mission Control\",\"summary\":\"A local mission-control dashboard that opens in under 2 seconds from a JSON cache and immediately answers \\\"what needs my attention\\\": a ranked queue of dirty, unpushed, and stale repos with plain-language reason badges and inline 90-day sparklines, backed by a hand-rolled SVG 12-month heatmap and activity timeline that cross-filter each other. Res…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "design-taste",
+      "phaseIndex": 1,
+      "phaseTitle": "Design",
+      "agentId": "a21a1717c84b718bf",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786659944507,
+      "queuedAt": 1786659942906,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "Repo Atlas — Survey Folio",
+      "promptPreview": "You are one of three competing designers on an overnight autonomous\nbuild. You see only your own brief. Produce a complete design\ncandidate for the spec below.\n\nYour brief: TASTE-FORWARD. Organize the whole design around aesthetic\nand experiential identity: distinctive look and feel FIRST, and let\nthe architecture serve it. Lean hard on the taste notes. The product\nshould be recognizable from a si…",
+      "lastProgressAt": 1786660095513,
+      "tokens": 23988,
+      "toolCalls": 1,
+      "durationMs": 151006,
+      "resultPreview": "{\"name\":\"Repo Atlas — Survey Folio\",\"summary\":\"Repo Atlas rendered as a cartographic survey folio: the dashboard is a set of numbered engraved plates (\\\"Fig. 1 — Notices\\\", \\\"Fig. 2 — Commit Soundings\\\") on cream paper (night-chart-room dark theme), with a pre-ranked attention queue of advisories on top, hand-rolled SVG heatmap/timeline/strata charts below, and a per-repo drill-down plate. A small…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "design-judge",
+      "phaseIndex": 2,
+      "phaseTitle": "Judge",
+      "agentId": "a3928b8adf53f7bb1",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786660097133,
+      "queuedAt": 1786660095515,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "C",
+      "promptPreview": "You are the design judge for an overnight autonomous build. 3 anonymous candidates follow.\nYou do not know who produced which, and you must not guess — judge the\nartifact, not the description. You have NO context beyond what is\nbelow. Judge fresh.\n\nAdversarial conduct rules:\n- Your job is to find failures in each candidate, not to admire\n  summaries. Trust nothing. Verify everything against the sp…",
+      "lastProgressAt": 1786660171912,
+      "tokens": 39653,
+      "toolCalls": 1,
+      "durationMs": 74778,
+      "resultPreview": "{\"scores\":[{\"candidate\":\"A\",\"must_haves\":9,\"buildability\":9,\"value\":7,\"coherence\":9,\"depth\":4,\"total\":38},{\"candidate\":\"B\",\"must_haves\":7,\"buildability\":7,\"value\":8,\"coherence\":8,\"depth\":8,\"total\":38},{\"candidate\":\"C\",\"must_haves\":10,\"buildability\":8,\"value\":9,\"coherence\":9,\"depth\":7,\"total\":43}],\"winner\":\"C\",\"rationale\":\"C wins on must-have completeness plus depth without sacrificing buildability…"
+    }
+  ],
+  "totalTokens": 111609,
+  "totalToolCalls": 4
+}

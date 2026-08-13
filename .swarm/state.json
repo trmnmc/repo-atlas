@@ -1,0 +1,40 @@
+{
+  "idea": "local mission-control dashboard for ~/Projects: scan every git repo, attention queue first, then heatmap/timeline/drill-down",
+  "project_dir": "/Users/truman/Projects/repo-atlas",
+  "created_at": "2026-08-13T17:22:37-05:00",
+  "phase": "PLAN",
+  "cycle": 1,
+  "run_cmd": "npm start",
+  "test_cmd": "npm test",
+  "preview": {
+    "launch_name": "atlas",
+    "port": 4600
+  },
+  "spec_digest": [
+    "Local mission-control for ~/Projects: Node scanner + Vite/React SPA on :4600; attention queue first, then heatmap/timeline/drill-down.",
+    "Must-haves: auto-scan git repos, attention+activity views, per-repo drill-down, live rescan without restart.",
+    "Non-goals: no network/GitHub API, no DB, read-only UI, no auth.",
+    "Taste: hand-rolled SVG, dense-but-calm, fast; QA hand-computes expected outputs from Domain rules against fixture repos."
+  ],
+  "decisions": [
+    {
+      "cycle": 1,
+      "what": "Design: TASTE-FORWARD Survey Folio (candidate C) — survey-atlas visual identity (Plates, tokens.css, vermilion-only attention accent), node:http server + SSE rescan progress, contract-freeze-first wave 0; grafted 6 steals: heatmap day-click cross-filter, injectable SSE transport w/ polling fallback (jsdom), shared fixture Snapshot + contract-lock test, rev-list parse-order fixture test, TZ pinned in vitest config, Cmd+K palette",
+      "why": "blind judge 43/50 — only candidate covering the full-repo Gazetteer DoD line plus all four nice-to-haves at depth 7 / buildability 8"
+    }
+  ],
+  "known_issues": [],
+  "counters": {
+    "consecutive_no_value": 0,
+    "consecutive_failures": 0,
+    "k_current": 3,
+    "wave_streak": 0,
+    "window_tokens_attributed": 0
+  },
+  "last_cycle": {
+    "n": 1,
+    "work": "design-panel",
+    "outcome": "winner C + 6 steals recorded",
+    "commit": ""
+  }
+}
