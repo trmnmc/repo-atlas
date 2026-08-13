@@ -1,0 +1,222 @@
+/* ==================================================================
+   Repo Atlas — Survey Folio: per-repo drill-down (RepoDetail)
+   Structural/typographic rules ONLY. Every color value below is a
+   var(--token) from src/styles/tokens.css — no ad-hoc hex, no new hues.
+   Render-vocabulary classes (.advisory--*, .sounding, .plate, ...) are
+   defined in tokens.css and left untouched; the classes here are the
+   new structural names RepoDetail and its plate contents need.
+   ================================================================== */
+
+.repo-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--plate-gap);
+}
+
+/* ------------------------------------------------------------------
+   Header
+   ------------------------------------------------------------------ */
+.repo-detail__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
+  border-bottom: var(--hairline) solid var(--rule);
+}
+
+.repo-detail__back {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  font-family: var(--font-serif);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 0;
+}
+.repo-detail__back:hover,
+.repo-detail__back:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.repo-detail__name {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  line-height: var(--leading-tight);
+  color: var(--ink);
+  margin: 0;
+}
+
+.repo-detail__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.repo-detail__branch {
+  color: var(--ink-muted);
+}
+
+/* .detail-chip — small inline chip used for the upstream state and dirty
+   badge. Neutral by default; the modifier classes (advisory--dirty,
+   advisory--unpushed, advisory--no-remote) from tokens.css carry the
+   colored/vermilion treatment. */
+.detail-chip {
+  display: inline-flex;
+  align-items: baseline;
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-xs);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  border: var(--hairline) solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink-muted);
+  background: var(--paper-sunken);
+}
+.detail-chip.advisory--dirty,
+.detail-chip.advisory--unpushed,
+.detail-chip.advisory--no-remote {
+  border: none;
+  padding: var(--space-1) var(--space-2);
+}
+
+/* ------------------------------------------------------------------
+   Empty state (shared by CommitLog / TouchedFiles / BranchList)
+   ------------------------------------------------------------------ */
+.detail-empty {
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+  margin: 0;
+}
+
+.detail-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------
+   CommitLog (Fig. 8 — Ship's Log)
+   ------------------------------------------------------------------ */
+.commit-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.commit-log__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--hairline) solid var(--rule);
+  font-size: var(--text-sm);
+}
+.commit-log__row:last-child {
+  border-bottom: none;
+}
+
+.commit-log__date {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+.commit-log__subject {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ink);
+}
+
+.commit-log__author {
+  flex: none;
+  color: var(--ink-faint);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+}
+
+/* ------------------------------------------------------------------
+   TouchedFiles (Fig. 9 — Recent Workings)
+   ------------------------------------------------------------------ */
+.touched-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.touched-files__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--hairline) solid var(--rule);
+  font-size: var(--text-sm);
+}
+.touched-files__row:last-child {
+  border-bottom: none;
+}
+
+.touched-files__path {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.touched-files__date {
+  flex: none;
+  color: var(--ink-muted);
+}
+
+/* ------------------------------------------------------------------
+   BranchList (Fig. 10 — Charted Branches)
+   ------------------------------------------------------------------ */
+.branch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.branch-list__row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: var(--hairline) solid var(--rule);
+  font-size: var(--text-sm);
+}
+.branch-list__row:last-child {
+  border-bottom: none;
+}
+
+.branch-list__marker {
+  flex: none;
+  width: 1em;
+  color: var(--ink);
+}
+
+.branch-list__row--current .branch-list__name {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.branch-list__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ink-muted);
+}
+
+.branch-list__tip {
+  flex: none;
+  color: var(--ink-muted);
+}
