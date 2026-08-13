@@ -100,10 +100,10 @@
       "acceptance": "A scan over temp-dir fixture repos produces a contract-conforming Snapshot with heatmap counts keyed by author-date local-timezone dayKey, LOC-by-extension excluding node_modules/dist/.git/vendored via walk-time pruning (never entered), per-repo progress callbacks firing done/total, and an atomically written .atlas-cache.json that loads intact on next boot",
       "packages": [],
       "route_class": "core",
-      "status": "todo",
+      "status": "done",
       "model": "fable",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 5"
     },
     {
       "id": "T-005",
@@ -175,10 +175,10 @@
         "react",
         "@testing-library/react"
       ],
-      "status": "todo",
+      "status": "done",
       "model": "sonnet",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 5"
     },
     {
       "id": "T-008",
@@ -237,10 +237,10 @@
         "react",
         "@testing-library/react"
       ],
-      "status": "todo",
+      "status": "done",
       "model": "sonnet",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 5"
     },
     {
       "id": "T-010",

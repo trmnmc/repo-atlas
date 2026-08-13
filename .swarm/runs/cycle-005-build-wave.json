@@ -1,0 +1,129 @@
+{
+  "summary": "Parallel feature builders in isolated worktrees; returns claims for conductor verification",
+  "agentCount": 3,
+  "logs": [
+    "wave @ 1786662610 [T-004 \"Scanner: depth-limited ~/Projects walk with directory pruning, bounded-concurrency survey, LOC classifier with caps, local-timezone day bucketing, atomic JSON disk cache\" (fable/high), T-007 \"Data and UX hooks: useAtlas with injectable SSE transport + polling fallback, useTheme, useKeyboardNav; mount test for every exported hook\" (sonnet/high), T-009 \"Per-repo drill-down plate set: repo-scoped heatmap + timeline, Strata language/LOC, commit ledger, last-touched files, branch list\" (sonnet/high)]"
+  ],
+  "result": {
+    "wave": [
+      {
+        "itemId": "T-004",
+        "status": "done",
+        "branch": "wave-662610-T-004",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-004.xgh8lX",
+        "files_changed": [
+          "server/scan.js",
+          "server/loc.js",
+          "server/cache.js",
+          "server/scan.test.js"
+        ],
+        "summary": "Built the scanner slice against the frozen contract/gitFacts/attention modules. server/loc.js: walkLoc classifies lines-by-language from file extension with walk-time pruning (node_modules, dist, build, .git, vendor, .next, target, coverage pruned at readdir — never entered), a >1MB per-file skip, and a deterministic per-repo file cap (sorted walk order); never throws. server/scan.js: discoverRepos(rootDir, {maxDepth}) finds .git directories AND .git-file worktrees using the same pruned walk, stops descent at a found repo and at maxDepth; scan(rootDir, {onProgress, concurrency=4, nowIso}) runs gitFacts+walkLoc per repo through a bounded worker pool, emits contract-validated ScanEvents (start, repo with done/total per completion, done), and assembles a full Snapshot {generatedAt: nowIso, repos (discovery order), attention: buildAttention(...)} — zero-commit repos (lastCommit null) are excluded from attention since buildAttention derives staleness from lastCommit.iso. server/cache.js: saveCache writes atomically (unique sibling tmp + rename, tmp removed on failure); loadCache returns null for missing/corrupt/wrong-shape caches, never throws. server/scan.test.js: 19 tests on real mktemp fixture repos with pinned GIT_AUTHOR_DATE/GIT_COMMITTER_DATE (pattern reused from gitFacts.test.js): decoy repos under node_modules (root-level and inside alpha) never discovered, nested subrepo not double-counted, depth-4 repo invisible at maxDepth 3 but found at 4, LOC excludes node_modules/dist/oversized files, file cap deterministic, ordered start/repo x4/done events all passing isScanEvent, dayKey local-TZ heatmap (two same-local-day commits bucket to one key = 2), attention pre-sorted (dirty alpha > stale beta), snapshot round-trips through .atlas-cache.json intact with no temp debris, corrupt/missing/wrong-shape cache -> null. Full suite: 113 tests pass (94 pre-existing + 19 new). node_modules was already present in the worktree so no symlink was needed.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-004.xgh8lX\n\n Test Files  5 passed (5)\n      Tests  113 passed (113)\n   Start at  18:16:08\n   Duration  2.90s (transform 211ms, setup 0ms, import 469ms, tests 4.50s, environment 1.66s)"
+      },
+      {
+        "itemId": "T-007",
+        "status": "done",
+        "branch": "wave-662610-T-007",
+        "worktree": "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-007.1q1DIz",
+        "files_changed": [
+          "src/hooks/useAtlas.ts",
+          "src/hooks/useTheme.ts",
+          "src/hooks/useKeyboardNav.ts",
+          "src/hooks/hooks.test.tsx"
+        ],
+        "summary": "Built the three data/UX hooks in strict scope. useAtlas({transport}) accepts an injectable transport of shape {subscribe(onEvent): unsubscribe}, defaulting lazily to an EventSource-backed impl against ROUTES.scanEvents that is only constructed when typeof EventSource !== 'undefined' (never at import time, so it's safe under jsdom). It exposes {snapshot, scanning, progress:{done,total}, rescan()}: an initial GET /api/atlas populates the snapshot on mount; 'start'/'repo' ScanEvents update progress only; the snapshot is swapped exactly once, atomically, on the terminal 'done' event, followed by a refetch of /api/atlas. When transport is null (explicit injection, or no EventSource available), a polling fallback hits GET /api/atlas on a 1500ms interval while scanning, replacing the snapshot on the next successful poll and clearing scanning/the interval. rescan() POSTs to ROUTES.rescan and flips scanning true on a {scanning:true} response. useTheme() drives documentElement's data-theme attribute, persists to localStorage under the same 'atlas-theme' key index.html's bootstrap script uses, defaults to prefers-color-scheme (falling back to whatever data-theme/localStorage already holds), and provides toggleTheme/setTheme. useKeyboardNav({itemCount, onSelect}) handles j/k and ArrowUp/ArrowDown for index movement (clamped to bounds) and Enter for selection, using refs so Enter fires onSelect exactly once outside any setState updater, and ignores all keystrokes when the event target is an input, textarea, or contenteditable element. hooks.test.tsx mounts every exported hook (useAtlas, useTheme, useKeyboardNav) at least once, with 11 tests total: useAtlas's atomic-swap behavior is asserted directly (snapshot text unchanged after 'start'/'repo' events, changed only after 'done' plus a second fetch call), rescan()'s POST to ROUTES.rescan is asserted, and the null-transport polling fallback is exercised with vi.useFakeTimers()/advanceTimersByTimeAsync. No files outside the declared scope were touched; node_modules was already fully populated in the worktree (matches the main repo, no symlink needed) and an incidental vitest-cache diff under node_modules/.vite was reverted before committing so only the four hook files landed in the commit.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-007.1q1DIz\n\n Test Files  5 passed (5)\n      Tests  105 passed (105)\n   Start at  18:17:13\n   Duration  2.53s (transform 220ms, setup 0ms, import 540ms, tests 2.72s, environment 1.97s)"
+      },
+      {
+        "itemId": "T-009",
+        "status": "done",
+        "branch": "wave-662610-T-009",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-009.3ZI0Xv",
+        "files_changed": [
+          "src/views/RepoDetail.tsx",
+          "src/views/RepoDetail.test.tsx",
+          "src/components/CommitLog.tsx",
+          "src/components/TouchedFiles.tsx",
+          "src/components/BranchList.tsx",
+          "src/styles/detail.css"
+        ],
+        "summary": "Built the per-repo drill-down plate set. RepoDetail.tsx is a pure props-in view (repo + onBack, no fetching) rendering five FROZEN Plate-wrapped sections: Fig. 6 Commit Soundings (Heatmap + Timeline fed ONLY repo.commitDays, with a local useState-backed day-click cross-filter wire between them), Fig. 7 Strata of the Codebase (repo.loc), Fig. 8 Ship's Log (CommitLog: iso date in mono .sounding, subject, author), Fig. 9 Recent Workings (TouchedFiles: path + last-changed mono date), Fig. 10 Charted Branches (BranchList: current branch marked with an asterisk-style \"✳\" survey marker, tip dates in mono). The header shows repo name, branch name or \"detached @ &lt;sha&gt;\" for detached HEAD, an upstream chip (tracked → \"ahead N / behind N\" using CSS.advisoryClass('unpushed') when aheadBy>0, \"in sync\" neutral chip otherwise; state 'none' → CSS.advisoryNoRemote, text \"no remote\", never the unpushed class/word), and a dirty badge via CSS.advisoryClass('dirty') shown only when repo.dirty. detail.css uses only tokens.css vars and contract render-vocabulary classes (.sounding, .advisory--*, .plate) plus new structural classes for chip/list layout — no ad-hoc colors, no vermilion outside the frozen advisory modifiers. RepoDetail.test.tsx (15 tests) mounts on shared/fixtures.js repos and asserts: all five plates render with correct \"Fig. N — Caption\" text and aria-labels; a day present only in meridian's commitDays (2025-08-03, hand-verified via node) renders as an empty l0 cell when viewing ember-ledger, proving no cross-repo data leaks into the heatmap; timeline weekly totals for field-notes sum to exactly its own commitDays total; strata bands match tide-tables' own loc languages only; no-remote chip never contains \"unpushed\" and never carries the advisory--unpushed class; tracked-ahead chip shows the ahead count; in-sync repo shows a neutral chip with neither attention class; dirty badge present/absent correctly; detached HEAD renders \"detached @ &lt;sha&gt;\"; current branch is marked and every branch's tip date renders; commit log and touched files render every field; the heatmap-click → timeline-filter wire updates locally; back button invokes onBack. Full project suite: 109/109 passing (5 test files).",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-009.3ZI0Xv\n\n Test Files  5 passed (5)\n      Tests  109 passed (109)\n   Start at  18:16:36\n   Duration  2.96s (transform 200ms, setup 0ms, import 434ms, tests 3.57s, environment 1.66s)"
+      }
+    ],
+    "dead_items": [],
+    "timestamp": "1786662610"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder-T-004",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a577aca5cbcbe67cf",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786662658047,
+      "queuedAt": 1786662656207,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-004",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-004.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786663007989,
+      "tokens": 74772,
+      "toolCalls": 17,
+      "durationMs": 349942,
+      "resultPreview": "{\"itemId\":\"T-004\",\"status\":\"done\",\"branch\":\"wave-662610-T-004\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-004.xgh8lX\",\"files_changed\":[\"server/scan.js\",\"server/loc.js\",\"server/cache.js\",\"server/scan.test.js\"],\"summary\":\"Built the scanner slice against the frozen contract/gitFacts/attention modules. server/loc.js: walkLoc classifies lines-by-language from file extension wit…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "builder-T-007",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a456a81fde338ee12",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786662658385,
+      "queuedAt": 1786662656207,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-007",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-007.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786663048004,
+      "tokens": 80086,
+      "toolCalls": 28,
+      "durationMs": 389619,
+      "resultPreview": "{\"itemId\":\"T-007\",\"status\":\"done\",\"branch\":\"wave-662610-T-007\",\"worktree\":\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-007.1q1DIz\",\"files_changed\":[\"src/hooks/useAtlas.ts\",\"src/hooks/useTheme.ts\",\"src/hooks/useKeyboardNav.ts\",\"src/hooks/hooks.test.tsx\"],\"summary\":\"Built the three data/UX hooks in strict scope. useAtlas({transport}) accepts an injectable transport of shape {subs…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "builder-T-009",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a4fb76a9e66f8a501",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786662658052,
+      "queuedAt": 1786662656207,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-009",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-009.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786663047561,
+      "tokens": 96201,
+      "toolCalls": 40,
+      "durationMs": 389509,
+      "resultPreview": "{\"itemId\":\"T-009\",\"status\":\"done\",\"branch\":\"wave-662610-T-009\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-009.3ZI0Xv\",\"files_changed\":[\"src/views/RepoDetail.tsx\",\"src/views/RepoDetail.test.tsx\",\"src/components/CommitLog.tsx\",\"src/components/TouchedFiles.tsx\",\"src/components/BranchList.tsx\",\"src/styles/detail.css\"],\"summary\":\"Built the per-repo drill-down plate set. RepoDet…"
+    }
+  ],
+  "totalTokens": 251059,
+  "totalToolCalls": 85
+}
