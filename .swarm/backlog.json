@@ -52,10 +52,10 @@
       "acceptance": "Against fixture repos including a .git-file worktree, an empty zero-commit repo, a detached-HEAD checkout, and a branch with no upstream, every repo yields a partial RepoSummary (never a thrown scan failure), with upstream reported as none rather than a zero ahead-count — including an explicit fixture pinning that rev-list --left-right --count parse order reports a behind-only repo as behind, never ahead",
       "packages": [],
       "route_class": "core",
-      "status": "todo",
+      "status": "done",
       "model": "fable",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 4"
     },
     {
       "id": "T-003",
@@ -74,10 +74,10 @@
       "acceptance": "Given a matrix of repo states, the emitted queue orders dirty before unpushed before stale with ties broken by most-recent activity, the >90-day stale boundary is exact, and a repo with upstream none is labeled no-remote and never unpushed",
       "packages": [],
       "route_class": "core",
-      "status": "todo",
+      "status": "done",
       "model": "fable",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 4"
     },
     {
       "id": "T-004",
@@ -149,10 +149,10 @@
       "packages": [
         "react"
       ],
-      "status": "todo",
+      "status": "done",
       "model": "sonnet",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 4"
     },
     {
       "id": "T-007",

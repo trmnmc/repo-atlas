@@ -1,0 +1,125 @@
+{
+  "summary": "Parallel feature builders in isolated worktrees; returns claims for conductor verification",
+  "agentCount": 3,
+  "logs": [
+    "wave @ 1786661595 [T-002 \"Git plumbing facts per repo: branch, porcelain dirty, ahead/behind vs @{u}, 12-month author-date log, last-touched files, branch list — tolerant of worktrees, empty repos, detached HEAD\" (fable/high), T-003 \"Attention classification and ranking engine: dirty/unpushed/stale/ok flags and pre-ordered AttentionEntry[]\" (fable/high), T-006 \"Hand-rolled SVG chart suite: Heatmap with day-click cross-filter emit, Timeline honoring the day filter, Sparkline, Strata LOC bar\" (sonnet/high)]"
+  ],
+  "result": {
+    "wave": [
+      {
+        "itemId": "T-002",
+        "status": "done",
+        "branch": "wave-661595-T-002",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-002.GjSmap",
+        "files_changed": [
+          "server/gitFacts.js",
+          "server/gitFacts.test.js"
+        ],
+        "summary": "Built server/gitFacts.js: plain-Node ESM async gitFacts(repoPath) that shells out to git exclusively via execFile argv arrays and never throws. Returns the git-derived RepoSummary fields per the frozen shared/contract.js: name/path/id (kebab slug), branch or detached short-sha, porcelain dirty, three-state upstream ({state:'tracked',aheadBy,behindBy}|{state:'none'}) via rev-list --left-right --count @{u}...HEAD with LEFT=behind/RIGHT=ahead parse order pinned by an asymmetric behind-only fixture (behindBy=2, aheadBy=0), commitDays from a 12-month %aI log bucketed with shared dayKey (TZ pinned America/Chicago), lastCommit, recentCommits (15, hash/iso/subject/author), touchedFiles (10 distinct paths from a name-only log with lastIso+commit counts), and branches (current first, then tip-date desc). Hostile inputs — empty zero-commit repo, .git-file worktree (verified .git is a file), detached HEAD, no-upstream branch, non-repo dir, nonexistent path — all resolve to usable partials with upstream {state:'none'}, never a zero ahead-count and never a throw. Tests build real throwaway repos in a mktemp root (init -b, commits with explicit --date + GIT_AUTHOR_DATE/GIT_COMMITTER_DATE literals, isolated GIT_CONFIG_GLOBAL/SYSTEM, worktree add for the .git-file case, a local origin + three clones for behind-only/ahead-only/diverged/in-sync), no network, no Date.now in assertions. Committed as 5cef937 on the worktree branch; only in-scope files staged.",
+        "self_test_output": " ✓ server/gitFacts.test.js > tolerance — partial RepoSummary, never a thrown scan failure > a .git-file worktree resolves with full facts 48ms\n ✓ server/gitFacts.test.js > tolerance — partial RepoSummary, never a thrown scan failure > a directory that is not a git repo resolves to an inert partial 56ms\n ✓ server/gitFacts.test.js > tolerance — partial RepoSummary, never a thrown scan failure > a nonexistent path resolves to an inert partial instead of throwing 55ms\n ✓ server/gitFacts.test.js > tolerance — partial RepoSummary, never a thrown scan failure > a detached-HEAD repo still yields history facts 59ms\n\n Test Files  1 passed (1)\n      Tests  21 passed (21)\n\nFull suite (npm test → vitest run):\n Test Files  2 passed (2)\n      Tests  58 passed (58)\n   Start at  17:59:11\n   Duration  2.28s (transform 61ms, setup 0ms, import 131ms, tests 2.20s, environment 346ms)"
+      },
+      {
+        "itemId": "T-003",
+        "status": "done",
+        "branch": "wave-661595-T-003",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-003.td5OlE",
+        "files_changed": [
+          "server/attention.js",
+          "server/attention.test.js"
+        ],
+        "summary": "Built the attention engine in server/attention.js (plain Node ESM) on top of the frozen shared contract: classify(repo, nowIso) returns {reasons, displayState} where reasons is every applicable AttentionReason filtered through ATTENTION_ORDER (so a repo can be dirty AND stale) and displayState is the strongest reason, falling back to 'no-remote' for upstream {state:'none'} and 'ok' otherwise; unpushed requires upstream.state==='tracked' && aheadBy>0, so a no-remote repo can never be unpushed; staleness delegates to contract isStale (strict >90 days). buildAttention(repos, nowIso) emits one AttentionEntry per attention-needing repo (strongest reason, lastActivityIso = lastCommit.iso) and returns it pre-sorted via contract sortAttention — no comparator logic duplicated. TDD: wrote server/attention.test.js first (confirmed red, then green) covering every displayState, tracked-behind not-unpushed, the exact boundary (90d = not stale, 90d+1s = stale against fixed nowIso 2026-08-01T12:00:00Z), all multi-reason combos, no-remote-never-unpushed under every combination, band ordering dirty>unpushed>stale with recency-desc tie-breaks and stable order on identical instants, exclusion of ok/no-remote repos, and exact reproduction of the canonical shared fixture attention queue. node_modules was already present in the worktree (tracked in this repo), so no symlink was needed. Committed as 6e5a9cf on wave-661595-T-003; worktree left in place for the conductor.",
+        "self_test_output": " RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-003.td5OlE\n\n\n Test Files  2 passed (2)\n      Tests  57 passed (57)\n   Start at  17:56:15\n   Duration  572ms (transform 82ms, setup 0ms, import 148ms, tests 47ms, environment 715ms)"
+      },
+      {
+        "itemId": "T-006",
+        "status": "done",
+        "branch": "wave-661595-T-006",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-006.GeSnju",
+        "files_changed": [
+          "src/charts/Heatmap.tsx",
+          "src/charts/Timeline.tsx",
+          "src/charts/Sparkline.tsx",
+          "src/charts/Strata.tsx",
+          "src/charts/charts.test.tsx",
+          "src/styles/charts.css"
+        ],
+        "summary": "Built the four hand-rolled SVG chart components, bare props-in/SVG-out (no Plate wrapper, no chart libraries), using only tokens.css vars and the shared/contract.js render vocabulary.\n\nHeatmap {commitDays, endDayKey, onDayClick}: 53-column x 7-row GitHub-style grid (Sun..Sat rows), anchored at endDayKey's week. Every one of the 371 cells always renders (no truncation), level = 0 for zero commits else min(count,4), rendered via heatmapLevelClass(). Month labels placed at each column whose Sunday starts a new calendar month. Each cell is a rect with data-daykey, role=button, tabIndex=0, and both click and Enter/Space call onDayClick(dayKey) — the cross-filter emit.\n\nTimeline {commitDays, filterDay?}: derives its own 52-week trailing window from the max key present in commitDays (no endDayKey prop), draws an impulse+area \"sounding\" (vertical stems + dot markers + a faint area under the curve). When filterDay falls inside the window, the containing week gets a `--active` modifier (full ink, larger dot), every other week gets `--dim` (28% opacity), a dashed marker line is drawn at the exact day position within that week, and a mono tabular-figure reading (.sounding) shows the date and that week's count — this is the tested, visibly-different render. An out-of-window filterDay is a documented no-op (no crash, nothing marked).\n\nSparkline {series}: generic numeric-series sounding line with an end-value reading; safe on 0-length and 1-length series.\n\nStrata {loc}: horizontal LOC bar split into per-language bands using the frozen `.strata-band` class (sepia fill) with a hatch-pattern overlay (angle/spacing cycled per band, stroked in var(--ink)) so languages are told apart by texture, never hue — respecting the \"vermilion is attention-only\" and \"no ad-hoc colors\" rules. A legend below lists each language with its LOC in mono tabular figures (.sounding, via toLocaleString). Safe on empty loc (renders a single faint placeholder band).\n\ncharts.test.tsx (16 tests): Heatmap/Timeline expected values (window bounds, anchor weekday, per-level cell histogram, month-label columns, week totals) are hand-derived from the canonical fixture Snapshot with the derivation spelled out in comments — computed independently of the components' internals, not by re-running their logic. Verified two of these tests are load-bearing via mutation probes (broke the level-cap and the dim-class assignment; both correctly turned tests red, then green again on restore). Every chart also has an explicit empty-data render test asserting no throw.\n\nnpm test: 53/53 green (37 pre-existing contract tests + 16 new chart tests). node_modules was already present/tracked in the worktree (git worktree add checked it out since it's tracked in this repo, no symlink needed); I reverted the incidental vitest results.json cache diff after each run so only my 6 in-scope files are part of the commit.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-006.GeSnju\n\n Test Files  2 passed (2)\n      Tests  53 passed (53)\n   Start at  18:05:26\n   Duration  775ms (transform 115ms, setup 0ms, import 237ms, tests 259ms, environment 708ms)"
+      }
+    ],
+    "dead_items": [],
+    "timestamp": "1786661595"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder-T-002",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "ac2439994c846238a",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786661635455,
+      "queuedAt": 1786661633840,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-002",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-002.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786661994066,
+      "tokens": 69636,
+      "toolCalls": 16,
+      "durationMs": 358611,
+      "resultPreview": "{\"itemId\":\"T-002\",\"status\":\"done\",\"branch\":\"wave-661595-T-002\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-002.GjSmap\",\"files_changed\":[\"server/gitFacts.js\",\"server/gitFacts.test.js\"],\"summary\":\"Built server/gitFacts.js: plain-Node ESM async gitFacts(repoPath) that shells out to git exclusively via execFile argv arrays and never throws. Returns the git-derived RepoSummary f…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "builder-T-003",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a4ba0d79b2bde6f89",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786661635484,
+      "queuedAt": 1786661633840,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-003",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-003.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786661799518,
+      "tokens": 51587,
+      "toolCalls": 13,
+      "durationMs": 164034,
+      "resultPreview": "{\"itemId\":\"T-003\",\"status\":\"done\",\"branch\":\"wave-661595-T-003\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-003.td5OlE\",\"files_changed\":[\"server/attention.js\",\"server/attention.test.js\"],\"summary\":\"Built the attention engine in server/attention.js (plain Node ESM) on top of the frozen shared contract: classify(repo, nowIso) returns {reasons, displayState} where reasons is ev…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "builder-T-006",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a73db1923cb6730ed",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786661635625,
+      "queuedAt": 1786661633840,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-006",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-006.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786662349996,
+      "tokens": 130389,
+      "toolCalls": 47,
+      "durationMs": 714371,
+      "resultPreview": "{\"itemId\":\"T-006\",\"status\":\"done\",\"branch\":\"wave-661595-T-006\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-006.GeSnju\",\"files_changed\":[\"src/charts/Heatmap.tsx\",\"src/charts/Timeline.tsx\",\"src/charts/Sparkline.tsx\",\"src/charts/Strata.tsx\",\"src/charts/charts.test.tsx\",\"src/styles/charts.css\"],\"summary\":\"Built the four hand-rolled SVG chart components, bare props-in/SVG-out (n…"
+    }
+  ],
+  "totalTokens": 251612,
+  "totalToolCalls": 76
+}
