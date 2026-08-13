@@ -1,1 +1,299 @@
-{ "items": [] }
+{
+  "items": [
+    {
+      "id": "T-001",
+      "title": "Contract freeze: scaffold, shared/contract.ts (Node-importable dayKey + ScanEvent + routes), tokens.css, Plate.tsx, canonical shared fixture Snapshot + contract-lock test, vitest config with TZ pinned, package.json with all pinned deps",
+      "kind": "feature",
+      "priority": 1,
+      "value": "H",
+      "effort": "M",
+      "deps": [],
+      "files_hint": [
+        "package.json",
+        "package-lock.json",
+        "vite.config.ts",
+        "index.html",
+        "shared/contract.ts",
+        "shared/fixtures.ts",
+        "shared/contract.test.ts",
+        "src/styles/tokens.css",
+        "src/components/Plate.tsx"
+      ],
+      "acceptance": "The contract-lock test passes and fails if any status enum value, attention comparator ordering (dirty > unpushed > stale, ties by recency), ScanEvent shape, or the canonical fixture Snapshot drifts from shared/contract.ts, with vitest running non-interactively under a pinned TZ",
+      "packages": [
+        "react",
+        "react-dom",
+        "vite",
+        "@vitejs/plugin-react",
+        "vitest",
+        "jsdom",
+        "@testing-library/react"
+      ],
+      "route_class": "core",
+      "status": "todo",
+      "model": "fable",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-002",
+      "title": "Git plumbing facts per repo: branch, porcelain dirty, ahead/behind vs @{u}, 12-month author-date log, last-touched files, branch list — tolerant of worktrees, empty repos, detached HEAD",
+      "kind": "feature",
+      "priority": 2,
+      "value": "H",
+      "effort": "M",
+      "deps": [
+        "T-001"
+      ],
+      "files_hint": [
+        "server/gitFacts.js",
+        "server/gitFacts.test.js"
+      ],
+      "acceptance": "Against fixture repos including a .git-file worktree, an empty zero-commit repo, a detached-HEAD checkout, and a branch with no upstream, every repo yields a partial RepoSummary (never a thrown scan failure), with upstream reported as none rather than a zero ahead-count — including an explicit fixture pinning that rev-list --left-right --count parse order reports a behind-only repo as behind, never ahead",
+      "packages": [],
+      "route_class": "core",
+      "status": "todo",
+      "model": "fable",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-003",
+      "title": "Attention classification and ranking engine: dirty/unpushed/stale/ok flags and pre-ordered AttentionEntry[]",
+      "kind": "feature",
+      "priority": 3,
+      "value": "H",
+      "effort": "S",
+      "deps": [
+        "T-001"
+      ],
+      "files_hint": [
+        "server/attention.js",
+        "server/attention.test.js"
+      ],
+      "acceptance": "Given a matrix of repo states, the emitted queue orders dirty before unpushed before stale with ties broken by most-recent activity, the >90-day stale boundary is exact, and a repo with upstream none is labeled no-remote and never unpushed",
+      "packages": [],
+      "route_class": "core",
+      "status": "todo",
+      "model": "fable",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-004",
+      "title": "Scanner: depth-limited ~/Projects walk with directory pruning, bounded-concurrency survey, LOC classifier with caps, local-timezone day bucketing, atomic JSON disk cache",
+      "kind": "feature",
+      "priority": 4,
+      "value": "H",
+      "effort": "L",
+      "deps": [
+        "T-001",
+        "T-002",
+        "T-003"
+      ],
+      "files_hint": [
+        "server/scan.js",
+        "server/loc.js",
+        "server/cache.js",
+        "server/scan.test.js"
+      ],
+      "acceptance": "A scan over temp-dir fixture repos produces a contract-conforming Snapshot with heatmap counts keyed by author-date local-timezone dayKey, LOC-by-extension excluding node_modules/dist/.git/vendored via walk-time pruning (never entered), per-repo progress callbacks firing done/total, and an atomically written .atlas-cache.json that loads intact on next boot",
+      "packages": [],
+      "route_class": "core",
+      "status": "todo",
+      "model": "fable",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-005",
+      "title": "HTTP server on :4600: static dist, cache-first GET /api/atlas, POST /api/rescan async job, GET /api/scan-events SSE progress, GET /api/repo/:id",
+      "kind": "feature",
+      "priority": 5,
+      "value": "H",
+      "effort": "M",
+      "deps": [
+        "T-001",
+        "T-004"
+      ],
+      "files_hint": [
+        "server/index.js",
+        "server/index.test.js"
+      ],
+      "acceptance": "With an injected fixture scanner, GET /api/atlas returns the cached Snapshot instantly, POST /api/rescan returns before the scan completes, /api/scan-events emits contract ScanEvents in order ending with a terminal completion event after which /api/atlas serves the fresh data without a server restart, and /api/repo/:id returns drill-down detail",
+      "packages": [],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-006",
+      "title": "Hand-rolled SVG chart suite: Heatmap with day-click cross-filter emit, Timeline honoring the day filter, Sparkline, Strata LOC bar",
+      "kind": "feature",
+      "priority": 6,
+      "value": "H",
+      "effort": "M",
+      "deps": [
+        "T-001"
+      ],
+      "files_hint": [
+        "src/charts/Heatmap.tsx",
+        "src/charts/Timeline.tsx",
+        "src/charts/Sparkline.tsx",
+        "src/charts/Strata.tsx",
+        "src/charts/charts.test.tsx",
+        "src/styles/charts.css"
+      ],
+      "acceptance": "Rendered from the shared fixture Snapshot, the heatmap draws the exact expected 53x7 cell counts with correct month labels using the contract dayKey, clicking a day cell emits that date as a filter which the Timeline visibly narrows to, and all four charts render safely on empty data",
+      "packages": [
+        "react"
+      ],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-007",
+      "title": "Data and UX hooks: useAtlas with injectable SSE transport + polling fallback, useTheme, useKeyboardNav; mount test for every exported hook",
+      "kind": "feature",
+      "priority": 7,
+      "value": "H",
+      "effort": "M",
+      "deps": [
+        "T-001"
+      ],
+      "files_hint": [
+        "src/hooks/useAtlas.ts",
+        "src/hooks/useTheme.ts",
+        "src/hooks/useKeyboardNav.ts",
+        "src/hooks/hooks.test.tsx"
+      ],
+      "acceptance": "Every exported hook mounts cleanly in a component-mount test using an injected mock transport (no EventSource in jsdom), and useAtlas swaps in fresh Snapshot data atomically on the terminal scan event — falling back to /api/atlas polling when the SSE transport is unavailable",
+      "packages": [
+        "react",
+        "@testing-library/react"
+      ],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-008",
+      "title": "App shell + Overview folio: masthead, hash routing, Fig. 1 Notices attention queue, Fig. 2/3 heatmap+timeline with cross-filter wiring, Fig. 4 Legend stats row, Fig. 5 Gazetteer with search/sort, ScanBar rescan progress",
+      "kind": "feature",
+      "priority": 8,
+      "value": "H",
+      "effort": "L",
+      "deps": [
+        "T-001",
+        "T-006",
+        "T-007"
+      ],
+      "files_hint": [
+        "src/main.tsx",
+        "src/App.tsx",
+        "src/views/Overview.tsx",
+        "src/components/AttentionQueue.tsx",
+        "src/components/StatsRow.tsx",
+        "src/components/Gazetteer.tsx",
+        "src/components/ScanBar.tsx",
+        "src/views/Overview.test.tsx",
+        "src/styles/overview.css"
+      ],
+      "acceptance": "Mounted on the shared fixture Snapshot, the overview shows the attention queue in server-delivered order with reason badges (including no-remote) strictly above the aggregate heatmap and timeline, every fixture repo appears in the Gazetteer table with branch/state/last-commit and live search/sort, and clicking Rescan shows n/total progress from scan events",
+      "packages": [
+        "react",
+        "@testing-library/react"
+      ],
+      "status": "todo",
+      "model": "opus",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-009",
+      "title": "Per-repo drill-down plate set: repo-scoped heatmap + timeline, Strata language/LOC, commit ledger, last-touched files, branch list",
+      "kind": "feature",
+      "priority": 9,
+      "value": "H",
+      "effort": "M",
+      "deps": [
+        "T-001",
+        "T-006"
+      ],
+      "files_hint": [
+        "src/views/RepoDetail.tsx",
+        "src/components/CommitLog.tsx",
+        "src/components/TouchedFiles.tsx",
+        "src/components/BranchList.tsx",
+        "src/views/RepoDetail.test.tsx",
+        "src/styles/detail.css"
+      ],
+      "acceptance": "Opening a fixture repo drill-down renders its languages/LOC strata, recent commits, last-touched files, and branch list (current branch marked, upstream/no-remote state shown), with the heatmap and timeline scoped to that repo data only",
+      "packages": [
+        "react",
+        "@testing-library/react"
+      ],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-010",
+      "title": "Cmd+K fuzzy repo-jump palette layered on j/k keyboard navigation",
+      "kind": "feature",
+      "priority": 20,
+      "value": "M",
+      "effort": "S",
+      "deps": [
+        "T-007",
+        "T-008"
+      ],
+      "files_hint": [
+        "src/components/CommandPalette.tsx",
+        "src/components/CommandPalette.test.tsx"
+      ],
+      "acceptance": "Pressing Cmd+K opens a fuzzy-matching palette over the fixture repo set and choosing a match navigates to that repo drill-down, with Escape closing the palette without navigating",
+      "packages": [
+        "react",
+        "@testing-library/react"
+      ],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": ""
+    },
+    {
+      "id": "T-011",
+      "title": "Integration against the real ~/Projects: clean rebuild-then-serve (no stale dist), DoD walk-through, cross-filter and palette seam wiring, tokens-only visual audit, README",
+      "kind": "fix",
+      "priority": 25,
+      "value": "H",
+      "effort": "M",
+      "deps": [
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-007",
+        "T-008",
+        "T-009",
+        "T-010"
+      ],
+      "files_hint": [
+        "README.md"
+      ],
+      "acceptance": "From a clean checkout with dist deleted, npm start serves the dashboard at http://localhost:4600 in under 2 seconds from cache, listing every git repo under ~/Projects with correct branch/dirty/last-commit, working drill-down and heatmap day-click cross-filter, and a Rescan that updates data live without restarting the server",
+      "packages": [],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": ""
+    }
+  ]
+}

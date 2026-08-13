@@ -2,8 +2,8 @@
   "idea": "local mission-control dashboard for ~/Projects: scan every git repo, attention queue first, then heatmap/timeline/drill-down",
   "project_dir": "/Users/truman/Projects/repo-atlas",
   "created_at": "2026-08-13T17:22:37-05:00",
-  "phase": "PLAN",
-  "cycle": 1,
+  "phase": "BUILD",
+  "cycle": 2,
   "run_cmd": "npm start",
   "test_cmd": "npm test",
   "preview": {
@@ -32,9 +32,9 @@
     "window_tokens_attributed": 0
   },
   "last_cycle": {
-    "n": 1,
-    "work": "design-panel",
-    "outcome": "winner C + 6 steals recorded",
+    "n": 2,
+    "work": "PLAN (inline, 1 Plan agent)",
+    "outcome": "11 items written; every must-have covered; core→fable",
     "commit": ""
   }
 }
