@@ -30,10 +30,10 @@
         "@testing-library/react"
       ],
       "route_class": "core",
-      "status": "todo",
+      "status": "done",
       "model": "fable",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 3: 37/37 green, plain-node import ok, mutation probe failed suite as required"
     },
     {
       "id": "T-002",
