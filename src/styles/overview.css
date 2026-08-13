@@ -1,0 +1,613 @@
+/* ==================================================================
+   Repo Atlas — Survey Folio: app shell + Overview folio
+   Structural/typographic rules ONLY. Every colour value below is a
+   var(--token) from src/styles/tokens.css — no ad-hoc hex, no new hues.
+   The render-vocabulary classes (.plate, .advisory--*, .gazetteer-row,
+   .sounding, .heatmap-cell--*, .palette) are frozen in tokens.css and
+   are never redefined here; the names below are the new structural
+   ones the shell and the five plates need.
+
+   Vermilion discipline: this sheet introduces exactly ONE new
+   vermilion rule — .reckoning__value--attention, applied only when the
+   dirty-tree count is non-zero. Everything else is ink on paper.
+   ================================================================== */
+
+/* ------------------------------------------------------------------
+   Shell
+   ------------------------------------------------------------------ */
+.app {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-5) var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.app__main {
+  display: block;
+  min-width: 0;
+}
+
+.app__loading {
+  color: var(--ink-muted);
+  font-size: var(--text-md);
+  padding: var(--space-6) 0;
+}
+
+.app__missing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  color: var(--ink-muted);
+}
+
+.app__missing-back {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+.app__missing-back:hover,
+.app__missing-back:focus-visible {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.app__colophon {
+  border-top: var(--hairline) solid var(--rule);
+  padding-top: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+}
+
+/* ------------------------------------------------------------------
+   Masthead — the folio title page, compressed to a banner
+   ------------------------------------------------------------------ */
+.masthead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.masthead__rule {
+  height: 0;
+  border-top: var(--hairline) solid var(--rule);
+}
+.masthead__rule--heavy {
+  border-top: var(--rule-heavy) solid var(--rule-strong);
+}
+
+.masthead__plate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) 0 var(--space-2);
+}
+
+.masthead__title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink);
+  flex: none;
+}
+
+.masthead__home {
+  color: inherit;
+  text-decoration: none;
+}
+.masthead__home:hover,
+.masthead__home:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.masthead__subtitle {
+  margin: 0;
+  flex: 1 1 16rem;
+  min-width: 0;
+  font-family: var(--font-serif);
+  font-size: var(--text-md);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-muted);
+}
+/* The em-dash that joins title and subtitle on the printed folio. */
+.masthead__subtitle::before {
+  content: '— ';
+  color: var(--ink-faint);
+}
+
+.masthead__theme {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-raised);
+  border: var(--hairline) solid var(--rule);
+  color: var(--ink-muted);
+  font-size: var(--text-md);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.masthead__theme:hover,
+.masthead__theme:focus-visible {
+  color: var(--ink);
+  border-color: var(--rule-strong);
+}
+
+.masthead__edition {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.masthead__edition-label {
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-faint);
+}
+
+.masthead__edition-date {
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* ------------------------------------------------------------------
+   Overview — plate stack
+   ------------------------------------------------------------------ */
+.overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--plate-gap);
+}
+
+/* The charts are viewBox SVGs, so stretching them to the plate's full
+   measure scales their INTERNAL type too — the Timeline's reading blows up
+   to headline size at desktop widths. Cap both at the heatmap's natural
+   measure (53 columns x 14px = 742px) so the engraving stays 1:1 and the
+   two charts share one column edge. */
+.overview .chart-heatmap,
+.overview .chart-timeline {
+  display: block;
+  width: 100%;
+  max-width: 46.5rem;
+}
+
+.plate-note {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+  line-height: var(--leading-body);
+}
+.plate-note kbd {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  border: var(--hairline) solid var(--rule);
+  padding: 0 var(--space-1);
+  color: var(--ink-muted);
+}
+
+/* Held to the charts' measure so the legend and the filter reading stay
+   under the engraving instead of drifting to the plate's far edge. */
+.plate-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  max-width: 46.5rem;
+}
+.plate-footer .plate-note {
+  margin: 0;
+}
+
+.palette__label {
+  color: var(--ink-faint);
+}
+/* tokens.css gives .heatmap-cell its SVG fill and only borders the div
+   form; these legend swatches are spans, so they carry their own hairline. */
+.palette__swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: var(--hairline) solid var(--rule);
+}
+
+/* ------------------------------------------------------------------
+   ScanBar — the survey instrument bar
+   ------------------------------------------------------------------ */
+.scanbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--hairline) solid var(--rule);
+}
+
+.scanbar__button {
+  flex: none;
+  background: var(--paper-raised);
+  border: var(--hairline) solid var(--rule-strong);
+  padding: var(--space-1) var(--space-4);
+  font-family: var(--font-serif);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  font-size: var(--text-sm);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.scanbar__button:hover:not(:disabled),
+.scanbar__button:focus-visible {
+  background: var(--paper-sunken);
+}
+.scanbar__button:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+}
+
+.scanbar__gauge {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.scanbar__reading {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+}
+
+.scanbar__line {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 8px;
+}
+.scanbar__line-base {
+  stroke: var(--rule);
+  stroke-width: var(--hairline);
+}
+.scanbar__line-run {
+  stroke: var(--indigo);
+  stroke-width: var(--rule-heavy);
+}
+.scanbar__line-mark {
+  stroke: var(--indigo);
+  stroke-width: var(--rule-heavy);
+}
+
+/* ------------------------------------------------------------------
+   Fig. 1 — Notices to Mariners (attention queue)
+   ------------------------------------------------------------------ */
+.attention-queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.attention-queue__item {
+  display: block;
+}
+
+/* The row itself is the control. .advisory (frozen) already supplies the
+   flex line, the bottom hairline, the vermilion wash and the vermilion
+   left rule — so this resets ONLY the two button borders tokens.css never
+   speaks to (top and right). Resetting the shorthand here would win on
+   load order and silently delete the accent bar that makes the queue
+   legible; resetting `background` would delete the wash the same way. */
+.attention-queue__row {
+  width: 100%;
+  background: none;
+  border-top: 0;
+  border-right: 0;
+  border-radius: 0;
+  font-family: var(--font-serif);
+  line-height: var(--leading-body);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+/* Affordance is carried by an inset rule, never by repainting the row. */
+.attention-queue__row:hover,
+.attention-queue__row:focus-visible {
+  outline: var(--hairline) solid var(--rule);
+  outline-offset: -1px;
+}
+.attention-queue__row--active {
+  outline: var(--hairline) solid var(--rule-strong);
+  outline-offset: -1px;
+}
+
+.advisory-reason {
+  flex: none;
+  min-width: 6.5rem;
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+}
+
+.attention-queue__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.attention-queue__branch {
+  flex: none;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+.attention-queue__marker {
+  flex: none;
+  padding-left: var(--space-2);
+  font-size: var(--text-xs);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+}
+
+.attention-queue__age {
+  flex: none;
+  min-width: 3.5rem;
+  text-align: right;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+.attention-queue__empty {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* ------------------------------------------------------------------
+   Fig. 4 — Legend & Reckonings (stats row)
+   ------------------------------------------------------------------ */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-5);
+}
+
+.reckoning {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-3);
+  border-left: var(--hairline) solid var(--rule);
+  min-width: 0;
+}
+
+.reckoning__label {
+  font-size: var(--text-xs);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-faint);
+}
+
+.reckoning__value {
+  font-size: var(--text-lg);
+  line-height: var(--leading-tight);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+/* The ONE vermilion rule in this sheet: dirty is an attention state. */
+.reckoning__value--attention {
+  color: var(--vermilion-ink);
+}
+
+.reckoning__note {
+  font-size: var(--text-xs);
+  color: var(--ink-muted);
+}
+
+.reckoning__trend {
+  display: block;
+  padding-top: var(--space-2);
+}
+/* A hair above the sparkline's natural 64px so it reads as a measurement
+   rather than a stray mark, without outgrowing the reckoning's value. */
+.reckoning__trend .chart-sparkline {
+  display: block;
+  width: 6.5rem;
+  height: auto;
+}
+
+/* ------------------------------------------------------------------
+   Fig. 5 — Gazetteer of Repositories
+   ------------------------------------------------------------------ */
+.gazetteer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.gazetteer__controls {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.gazetteer__search {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gazetteer__search-label {
+  flex: none;
+  font-size: var(--text-xs);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-faint);
+}
+
+.gazetteer__search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 22rem;
+  background: var(--paper-sunken);
+  border: none;
+  border-bottom: var(--hairline) solid var(--rule);
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+.gazetteer__search-input:focus-visible {
+  border-bottom-color: var(--rule-strong);
+  outline: none;
+}
+
+.gazetteer__count {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--ink-faint);
+}
+
+.gazetteer__table {
+  display: block;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.gazetteer__rowgroup {
+  display: block;
+  min-width: 0;
+}
+
+/* The head row mirrors .gazetteer-row's flex geometry without borrowing
+   its frozen class (which carries a data-row's rules and hover). */
+.gazetteer__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding: 0 0 var(--space-2);
+  border-bottom: var(--hairline) solid var(--rule-strong);
+}
+
+.gazetteer__row {
+  cursor: pointer;
+  min-width: 0;
+}
+.gazetteer__row:focus-visible {
+  outline: var(--hairline) solid var(--rule-strong);
+  outline-offset: -1px;
+}
+
+/* Shared column geometry — head and body cells use the same modifiers. */
+.gazetteer__cell {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.gazetteer__cell--name   { flex: 2 1 9rem; color: var(--ink); }
+.gazetteer__cell--branch { flex: 1 1 7rem; color: var(--ink-muted); font-size: var(--text-xs); }
+.gazetteer__cell--state  { flex: 1 1 8rem; display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.gazetteer__cell--last   { flex: 1 1 8rem; display: flex; gap: var(--space-2); justify-content: flex-end; color: var(--ink-muted); font-size: var(--text-xs); }
+.gazetteer__cell--loc    { flex: 0 1 5rem; text-align: right; color: var(--ink-muted); font-size: var(--text-xs); }
+
+.gazetteer__head-cell {
+  font-size: var(--text-xs);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-faint);
+}
+
+.gazetteer__sort {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+.gazetteer__sort:hover,
+.gazetteer__sort:focus-visible {
+  color: var(--ink);
+}
+.gazetteer__sort[data-active='true'] {
+  color: var(--ink);
+}
+.gazetteer__sort-mark {
+  font-size: 0.5rem;
+  color: var(--ink-faint);
+}
+
+.gazetteer__chip {
+  font-size: var(--text-xs);
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  padding: 0 var(--space-2);
+  white-space: nowrap;
+}
+.gazetteer__chip--clean {
+  color: var(--ink-faint);
+}
+
+/* A date and an age are single tokens — they never break across lines,
+   however narrow the column gets. */
+.gazetteer__date,
+.gazetteer__age {
+  white-space: nowrap;
+}
+.gazetteer__age {
+  color: var(--ink-faint);
+}
+
+.gazetteer__empty {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* ------------------------------------------------------------------
+   Narrow viewports — the folio folds to a single column
+   ------------------------------------------------------------------ */
+@media (max-width: 40rem) {
+  .app {
+    padding: var(--space-4) var(--space-3) var(--space-6);
+    gap: var(--space-5);
+  }
+  .gazetteer__cell--branch,
+  .gazetteer__cell--loc {
+    display: none;
+  }
+  .advisory-reason {
+    min-width: 5rem;
+  }
+}
