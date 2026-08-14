@@ -37,6 +37,15 @@ export function ScanBar({ scanning, progress, onRescan }: ScanBarProps) {
         type="button"
         className="scanbar__button"
         onClick={onRescan}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            // Stop the keydown from bubbling to the window-level
+            // useKeyboardNav Enter handler (bound by AttentionQueue),
+            // which would otherwise hijack this button's Enter/Space and
+            // overwrite location.hash with the queue's active row.
+            event.stopPropagation();
+          }
+        }}
         disabled={scanning}
         aria-label="Rescan the projects directory"
       >

@@ -26,9 +26,15 @@ export interface ScanEvent {
   total: number;
 }
 
-/** Structural mirror of shared/contract.js's Snapshot typedef. */
+/**
+ * Structural mirror of shared/contract.js's Snapshot typedef.
+ *
+ * generatedAt is null before any scan has ever completed (server's
+ * emptySnapshot()) — callers must treat that as "no snapshot yet", not as
+ * a survey dated at the epoch.
+ */
 export interface Snapshot {
-  generatedAt: string;
+  generatedAt: string | null;
   repos: unknown[];
   attention: unknown[];
 }

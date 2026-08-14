@@ -231,6 +231,11 @@ export function Gazetteer({ repos, nowIso, onSelect }: GazetteerProps) {
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault();
+                  // Stop the keydown from bubbling to the window-level
+                  // useKeyboardNav Enter handler (bound by AttentionQueue),
+                  // which would otherwise overwrite location.hash with its
+                  // own active row right after this row's own selection.
+                  event.stopPropagation();
                   onSelect(row.id);
                 }
               }}
