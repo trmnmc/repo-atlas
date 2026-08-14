@@ -155,8 +155,12 @@ export function App({ transport }: AppProps = {}) {
     void rescan();
   }, [rescan]);
 
+  // A snapshot with generatedAt === null means the server has never
+  // completed a scan (server/index.js's emptySnapshot()) — that is still
+  // "no survey yet", not a real (epoch-dated) result, so it must take the
+  // loading branch just like a null snapshot does.
   let main;
-  if (!snapshot) {
+  if (!snapshot || snapshot.generatedAt == null) {
     main = (
       <p className="app__loading" role="status">
         Surveying the projects directory…

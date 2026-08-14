@@ -169,6 +169,12 @@ export function Heatmap({ commitDays, endDayKey, onDayClick }: HeatmapProps) {
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
+                      // Stop the keydown from bubbling to the window-level
+                      // useKeyboardNav Enter handler (bound by
+                      // AttentionQueue), which would otherwise hijack this
+                      // cell's Enter and navigate to a repo instead of
+                      // narrowing Fig. 3 to this day.
+                      event.stopPropagation();
                       onDayClick?.(cell.key);
                     }
                   }}
