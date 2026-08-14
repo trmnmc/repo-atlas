@@ -34,6 +34,8 @@ const execFileP = promisify(execFile);
 
 /** How many commits feed recentCommits. */
 const RECENT_COMMITS = 15;
+/** Per-list cap on workingTree entries (staged / modified / untracked). */
+const WORKING_TREE_CAP = 50;
 /** How many distinct paths feed touchedFiles. */
 const TOUCHED_FILES = 10;
 /** How many commits the name-only log inspects for touchedFiles. */
@@ -100,6 +102,53 @@ function splitLogLine(line, nLead) {
     subject: parts.slice(nLead, parts.length - 1).join('\t'),
     author: parts[parts.length - 1],
   };
+}
+
+/**
+ * ADDITIVE RUNTIME FIELD — not in shared/contract.js (frozen); shape agreed
+ * with the UI: every RepoSummary carries workingTree describing WHAT is
+ * dirty. Paths are repo-relative exactly as `git status --porcelain` prints
+ * them, each list capped at WORKING_TREE_CAP entries with truncated=true
+ * when anything was cut. A clean repo (and any repo git cannot answer for)
+ * is { staged: [], modified: [], untracked: [], truncated: false }.
+ *
+ * @typedef {Object} WorkingTree
+ * @property {string[]} staged    Index differs from HEAD (X not ' '/'?').
+ * @property {string[]} modified  Worktree differs from index (Y not ' ').
+ * @property {string[]} untracked Porcelain `??` paths.
+ * @property {boolean}  truncated True if any list was cut at the cap.
+ */
+
+/**
+ * Parse `git status --porcelain` output (the SAME single call gitFacts
+ * already makes for `dirty`) into a WorkingTree. XY codes: `??` is
+ * untracked; otherwise a non-space X means staged and a non-space Y means
+ * modified — one file can be both (e.g. `MM`).
+ * @param {string | null} status porcelain stdout, or null when git failed
+ * @returns {WorkingTree}
+ */
+function parseWorkingTree(status) {
+  /** @type {WorkingTree} */
+  const tree = { staged: [], modified: [], untracked: [], truncated: false };
+  if (status === null) return tree;
+  /** @type {(list: string[], p: string) => void} */
+  const push = (list, p) => {
+    if (list.length < WORKING_TREE_CAP) list.push(p);
+    else tree.truncated = true;
+  };
+  for (const line of status.split('\n')) {
+    if (line.length < 4) continue; // 'XY <path>' needs at least 4 chars
+    const x = line[0];
+    const y = line[1];
+    const p = line.slice(3);
+    if (x === '?' && y === '?') {
+      push(tree.untracked, p);
+      continue;
+    }
+    if (x !== ' ' && x !== '?') push(tree.staged, p);
+    if (y !== ' ') push(tree.modified, p);
+  }
+  return tree;
 }
 
 /**
@@ -281,11 +330,16 @@ async function readBranches(repoPath, currentBranch, detached) {
  * anything git cannot answer degrades to the tolerant default (null branch,
  * empty maps/lists, upstream { state: 'none' }).
  *
+ * Also carries `workingTree` — an ADDITIVE runtime field (see the
+ * WorkingTree typedef above; shared/contract.js is frozen and deliberately
+ * not edited) parsed from the same single `git status --porcelain` call
+ * that feeds `dirty`.
+ *
  * @param {string} repoPath
  * @returns {Promise<Pick<RepoSummary,
  *   'name' | 'path' | 'id' | 'branch' | 'detached' | 'dirty' | 'upstream' |
  *   'lastCommit' | 'commitDays' | 'recentCommits' | 'touchedFiles' |
- *   'branches'>>}
+ *   'branches'> & { workingTree: WorkingTree }>}
  */
 export async function gitFacts(repoPath) {
   const abs = path.resolve(repoPath);
@@ -309,6 +363,7 @@ export async function gitFacts(repoPath) {
     branch,
     detached,
     dirty: status !== null && status.trim().length > 0,
+    workingTree: parseWorkingTree(status),
     upstream,
     lastCommit,
     commitDays,

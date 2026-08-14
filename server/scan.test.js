@@ -279,6 +279,29 @@ describe('scan', () => {
     expect(beta.loc).toEqual({ Python: 2 });
   });
 
+  it('passes workingTree through to each snapshot entry: dirty alpha matches porcelain, clean beta is empty', () => {
+    const alpha = snapshot.repos.find((r) => r.name === 'alpha');
+    // Expected untracked paths come straight from git itself.
+    const porcelainUntracked = git(alphaDir, ['status', '--porcelain'])
+      .split('\n')
+      .filter((line) => line.startsWith('?? '))
+      .map((line) => line.slice(3));
+    expect(porcelainUntracked.length).toBeGreaterThan(0); // fixture sanity
+    expect(alpha.workingTree).toEqual({
+      staged: [],
+      modified: [],
+      untracked: porcelainUntracked,
+      truncated: false,
+    });
+    const beta = snapshot.repos.find((r) => r.name === 'beta');
+    expect(beta.workingTree).toEqual({
+      staged: [],
+      modified: [],
+      untracked: [],
+      truncated: false,
+    });
+  });
+
   it('heatmap counts are keyed by author-date local-timezone dayKey', () => {
     const alpha = snapshot.repos.find((r) => r.name === 'alpha');
     expect(alpha.commitDays[dayKey(C1_ISO)]).toBe(1);

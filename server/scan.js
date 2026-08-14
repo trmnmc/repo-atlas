@@ -147,6 +147,8 @@ export async function scan(rootDir, opts = {}) {
   /** @type {RepoSummary[]} */
   const repos = await boundedPool(repoPaths, concurrency, async (repoPath) => {
     const [facts, loc] = await Promise.all([gitFacts(repoPath), walkLoc(repoPath)]);
+    // The spread carries EVERY gitFacts field into the summary, including
+    // the additive runtime `workingTree` (see gitFacts.js — contract frozen).
     /** @type {RepoSummary} */
     const summary = { ...facts, loc };
     done += 1;
