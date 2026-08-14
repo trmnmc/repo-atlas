@@ -27,6 +27,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { App, aggregateCommitDays, parseHash } from '../App.tsx';
 import { Overview } from './Overview.tsx';
 import { SURVEYING_LABEL } from '../components/ScanBar.tsx';
+import { SELECTION_STORAGE_KEY } from '../components/AttentionQueue.tsx';
 import { CSS, ROUTES, sortAttention } from '../../shared/contract.js';
 import { fixtureSnapshot } from '../../shared/fixtures.js';
 import type { AtlasTransport, ScanEvent } from '../hooks/useAtlas.ts';
@@ -97,6 +98,12 @@ function repoIds(nodes: ArrayLike<Element>): string[] {
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
+  // The attention queue persists its keyboard cursor under this key, and the
+  // key OUTLIVES a test (that is the whole point of it). Every test here must
+  // start from a queue that has never been navigated, or a cursor parked by an
+  // earlier test silently changes where j/Enter lands. Cleared before as well
+  // as after, so a test that throws mid-way cannot poison its neighbours.
+  window.sessionStorage.removeItem(SELECTION_STORAGE_KEY);
 });
 
 afterEach(() => {

@@ -26,28 +26,28 @@ import { useKeyboardNav } from '../hooks/useKeyboardNav.ts';
  * Persistence for the queue cursor across Overview unmount/remount (a
  * drill-down-and-Back round trip). Keyed by repoId, not index — the queue
  * order can shift between snapshots, but the repo the user was looking at
- * stays findable. sessionStorage survives the unmount; a module-level
- * fallback keeps things working if storage is unavailable (e.g. sandboxed
- * test/embed contexts that throw on access).
+ * stays findable. sessionStorage survives the unmount and is the SINGLE
+ * source of truth for the persisted cursor — deliberately no module-level
+ * mirror, so clearing the key (a fresh session, or a test's cleanup) really
+ * does clear it. If storage is unavailable (a sandboxed embed context that
+ * throws on access) persistence simply degrades to off; the cursor still
+ * works normally within a mount.
  */
-const SELECTION_STORAGE_KEY = 'atlas-notices-selection';
-let lastSelectedRepoIdFallback: string | null = null;
+export const SELECTION_STORAGE_KEY = 'atlas-notices-selection';
 
 function readPersistedSelection(): string | null {
   try {
     return window.sessionStorage.getItem(SELECTION_STORAGE_KEY);
   } catch {
-    return lastSelectedRepoIdFallback;
+    return null;
   }
 }
 
 function writePersistedSelection(repoId: string): void {
-  lastSelectedRepoIdFallback = repoId;
   try {
     window.sessionStorage.setItem(SELECTION_STORAGE_KEY, repoId);
   } catch {
-    // sessionStorage unavailable — the module-level fallback still covers
-    // same-session restores.
+    // sessionStorage unavailable — persistence degrades to off.
   }
 }
 
