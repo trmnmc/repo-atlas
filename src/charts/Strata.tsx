@@ -38,10 +38,19 @@ export function Strata({ loc }: StrataProps) {
     // An empty band (a single featureless rect) reads as broken, not empty
     // — say so explicitly instead, styled like the neighboring plates'
     // empty states (Timeline's muted-ink "No commit activity" reading).
+    //
+    // It carries the SAME `chart-strata__bar` box as the drawn bar (and an
+    // explicit width/height for good measure) so the message is set at the
+    // bar's size. Without it the svg took its default `width: 100%` with no
+    // height, so the plate's full width scaled the 240x20 viewBox up to a
+    // ~90px-tall billboard — a whole different typographic size from the
+    // chart it stands in for.
     return (
       <svg
-        className="chart-strata chart-strata--empty"
+        className="chart-strata chart-strata--empty chart-strata__bar"
         viewBox={`0 0 ${BAR_WIDTH} ${BAR_HEIGHT}`}
+        width={BAR_WIDTH}
+        height={BAR_HEIGHT}
         role="img"
         aria-label="No lines surveyed"
       >

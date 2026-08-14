@@ -37,6 +37,32 @@ const MONTH_NAMES = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
+/**
+ * Minimum spacing, in columns, between two month labels. A three-letter
+ * month set in the label face reads a little under two column widths at
+ * the grid's rendered scale, so three columns is the first spacing that
+ * leaves daylight between "Dec" and the label after it.
+ */
+const MIN_LABEL_COLS = 3;
+
+/**
+ * Drop any month label whose successor starts within MIN_LABEL_COLS
+ * columns, keeping the LATER one — the later label is the month the
+ * window actually spends time in, the dropped one a stub. The window's
+ * left edge is where this bites: a calendar-year window can open on a
+ * partial trailing December week (one column) immediately followed by
+ * January, which rendered as "DecJan" overprinted in the live grid.
+ * Walking right-to-left settles chains of stubs in one pass.
+ */
+function thinLabels<T extends { col: number }>(labels: T[]): T[] {
+  const kept: T[] = [];
+  for (let i = labels.length - 1; i >= 0; i--) {
+    const next = kept[kept.length - 1];
+    if (next && next.col - labels[i].col < MIN_LABEL_COLS) continue;
+    kept.push(labels[i]);
+  }
+  return kept.reverse();
+}
 
 /** Parse a contract "YYYY-MM-DD" dayKey into a local-midnight Date. */
 function parseDayKey(key: string): Date {
@@ -73,13 +99,13 @@ export function Heatmap({ commitDays, endDayKey, onDayClick }: HeatmapProps) {
   const firstColStart = addDays(lastColStart, -(COLS - 1) * 7);
 
   const columns: { key: string; count: number; level: 0 | 1 | 2 | 3 | 4; isFuture: boolean }[][] = [];
-  const monthLabels: { col: number; label: string }[] = [];
+  const monthStarts: { col: number; label: string }[] = [];
   let prevMonth = -1;
   for (let col = 0; col < COLS; col++) {
     const colStart = addDays(firstColStart, col * 7);
     const month = colStart.getMonth();
     if (month !== prevMonth) {
-      monthLabels.push({ col, label: MONTH_NAMES[month] });
+      monthStarts.push({ col, label: MONTH_NAMES[month] });
       prevMonth = month;
     }
     const cells: { key: string; count: number; level: 0 | 1 | 2 | 3 | 4; isFuture: boolean }[] = [];
@@ -94,6 +120,9 @@ export function Heatmap({ commitDays, endDayKey, onDayClick }: HeatmapProps) {
     }
     columns.push(cells);
   }
+
+  // Every month start is a candidate label; only those with room print.
+  const monthLabels = thinLabels(monthStarts);
 
   const width = COLS * STEP;
   const height = ROWS * STEP + LABEL_HEIGHT;
