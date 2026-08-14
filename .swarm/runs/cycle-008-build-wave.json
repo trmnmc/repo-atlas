@@ -1,0 +1,81 @@
+{
+  "summary": "Parallel feature builders in isolated worktrees; returns claims for conductor verification",
+  "agentCount": 2,
+  "logs": [
+    "wave @ 1786667169 [F-013 \"RETRY (attempt 2): chart edge cases — sparkline reading collision, Dec/Jan month-label overlap on calendar-year windows, oversized Strata empty state\" (opus/high), F-014 \"Notices rows for zero-commit repos render epoch age (20679d) — show em-dash like the Gazetteer\" (sonnet/high)]",
+    "parallel[1] failed: agent({schema}): StructuredOutput retry cap (5) exceeded — 5 failed calls with no valid output"
+  ],
+  "result": {
+    "wave": [
+      {
+        "itemId": "F-013",
+        "status": "done",
+        "branch": "wave-667169-F-013",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q",
+        "files_changed": [
+          "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q/src/charts/Sparkline.tsx",
+          "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q/src/charts/Heatmap.tsx",
+          "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q/src/charts/Strata.tsx",
+          "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q/src/charts/charts.test.tsx"
+        ],
+        "summary": "Worktree asserted (git-common-dir = /Users/truman/Projects/repo-atlas/.git, .swarm/SPEC.md present); node_modules symlinked from the main repo (untracked, not committed). (1) Sparkline: replaced the final-point heuristic with real geometry — placeReading() builds the reading's glyph box (10 units of glyph run left of the right-anchored x, 4 above the baseline, 1 below), computes the polyline's actual y-range over that x-span, and takes the rightmost x at which one of three baselines (top 7 / bottom 17 / mid 11) clears the line by >=3; when a steep final segment spans the full height at the right edge the search steps LEFT of the final point (falls back to the roomiest position seen if nothing clears). Verified placements: measured failing series -> x=58 y=7; rising/flat/mono-up -> x=64 y=17; falling/mono-down/single -> x=64 y=7, so ordinary series stay flush right and column alignment is preserved. (2) Heatmap: month starts are now thinned — any label whose successor starts within 3 columns is dropped in favour of the later, full month (right-to-left pass, so chains settle in one go). (3) Strata: the empty-state svg carries the drawn bar's own chart-strata__bar class plus explicit width=240/height=20, so it can no longer scale its 240x20 viewBox up to a ~90px billboard. Attempt 1's future-day-cell fix untouched. Tests: a geometric non-intersection check derived purely from the RENDERED path d and text x/y/text-anchor, applied to the exactly-reproduced measured failure ([0x10, 37, 350] gives points (56.545,14.52)->(62,2)), plus falling, flat and 24-point monotone series in both directions; a Dec/Jan calendar-year window (endDayKey 2026-12-31, firstColStart 2025-12-28) asserting the stub 'Dec' is dropped and the full 12-label row lands on hand-walked columns; the conductor-specified 2026-08-13 empty-commitDays window (note: that window's raw gaps are already 4-5 columns, so it passes pre-fix too — the Dec/Jan case is the one that actually pins the rule); and the empty-state sizing. I verified the new tests are load-bearing by reverting the three implementations and re-running: exactly 6 targeted failures, then restored. TWO EXISTING ASSERTIONS CHANGED, both because they encoded the defect: (a) the hand-computed fixture month-label list drops col 0 'Jul' (13 -> 12 labels), since that leading stub week is the same collision as the live Dec/Jan one and the thinning rule removes it — the derivation comment now spells out the raw walk and the thinning step, and adds \"nothing is drawn at x=0\"; (b) the rising-series test's `expect(readingY).not.toBe(17)` is gone — for [1,2,3,4,9] the line runs y=6.67..2 across the reading's x-span, so the old y=7 anchor is genuinely struck through and y=17 (which clears by 6.33) is the correct answer; it is replaced by the strictly stronger claim that the whole glyph box clears every stroke under it, with the hand-checked range and clearance values asserted. Full suite: 204/204 across 10 files; vite build also clean.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q\n\n\n Test Files  10 passed (10)\n      Tests  204 passed (204)\n   Start at  19:39:21\n   Duration  3.39s (transform 648ms, setup 0ms, import 1.37s, tests 8.29s, environment 3.48s)"
+      }
+    ],
+    "dead_items": [
+      "F-014"
+    ],
+    "timestamp": "1786667169"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder-F-013",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "ab73c0cdf175a504b",
+      "model": "claude-opus-5[1m]",
+      "state": "done",
+      "startedAt": 1786667209972,
+      "queuedAt": 1786667208442,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "F-013",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-F-013.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786667988991,
+      "tokens": 116423,
+      "toolCalls": 47,
+      "durationMs": 779019,
+      "resultPreview": "{\"itemId\":\"F-013\",\"status\":\"done\",\"branch\":\"wave-667169-F-013\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q\",\"files_changed\":[\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q/src/charts/Sparkline.tsx\",\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.J7z26Q/src/charts/Heatmap.tsx\",\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "builder-F-014",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a9b77b7601a13971d",
+      "model": "claude-sonnet-5",
+      "state": "error",
+      "startedAt": 1786667210835,
+      "queuedAt": 1786667208442,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "F-014",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-F-014.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786667375761,
+      "error": "agent({schema}): StructuredOutput retry cap (5) exceeded — 5 failed calls with no valid output",
+      "tokens": 62540,
+      "toolCalls": 21,
+      "durationMs": 164926
+    }
+  ],
+  "totalTokens": 178963,
+  "totalToolCalls": 68
+}

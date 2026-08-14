@@ -331,10 +331,10 @@
       ],
       "acceptance": "Sparkline reading never overlaps its line, an empty-activity heatmap window shows non-overlapping month labels and no cells after the snapshot day, and an empty Strata renders an explicit empty-state message like neighboring plates",
       "packages": [],
-      "status": "todo",
+      "status": "done",
       "model": "opus",
-      "attempts": 1,
-      "notes": "cycle 7 verify FAILED live (merge stands, tests green): (a) sparkline reading still struck through — relocated text at x=64,y=7 sits in the rising final segment path (56.5,14.5)->(62,2); anchor must account for the LINE SEGMENT near the text box, not just the final point y. (b) Dec/Jan overlap persists on calendar-year windows: Dec label x=137 w=39 collides Jan x=158 — suppress a leading partial-week month label when the next label is < one label-width away. (c) strata empty state stretches to container width (~90px tall) — chart-strata--empty needs the same width constraint as the non-empty chart. Evidence screenshots in .swarm/runs/cycle-007-postmerge-look-qa-*.png"
+      "attempts": 2,
+      "notes": "verified cycle 8 live (hard-reloaded page): sparkline readings stepped left + clear of ink band; mocktail labels 12 no overlaps (stub Dec dropped); strata empty 20px tall with width=240"
     },
     {
       "id": "F-014",
@@ -351,9 +351,9 @@
       "acceptance": "An attention row whose lastActivityIso is the epoch fallback (1970-01-01) shows an em-dash (or no-commits marker) in the age slot, never a days-since-epoch figure",
       "packages": [],
       "status": "todo",
-      "model": "sonnet",
-      "attempts": 0,
-      "notes": "look finding medium cycle 7"
+      "model": "opus",
+      "attempts": 1,
+      "notes": "builder died cycle 8 (StructuredOutput retry cap); escalated to opus, still todo"
     }
   ]
 }

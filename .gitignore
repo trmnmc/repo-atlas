@@ -2,3 +2,4 @@ node_modules/
 dist/
 .atlas-cache.json
 *.log
+.gstack/

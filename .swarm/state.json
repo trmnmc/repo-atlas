@@ -3,7 +3,7 @@
   "project_dir": "/Users/truman/Projects/repo-atlas",
   "created_at": "2026-08-13T17:22:37-05:00",
   "phase": "BUILD",
-  "cycle": 7,
+  "cycle": 8,
   "run_cmd": "npm start",
   "test_cmd": "npm test",
   "preview": {
@@ -32,9 +32,9 @@
     "window_tokens_attributed": 0
   },
   "last_cycle": {
-    "n": 7,
-    "work": "build-wave [F-012 F-013 T-010] + conductor wiring + look",
-    "outcome": "2 verified, F-013 verify FAILED -> opus retry, F-014 filed",
+    "n": 8,
+    "work": "build-wave retry [F-013 opus, F-014]",
+    "outcome": "F-013 verified live; F-014 builder died -> opus",
     "commit": ""
   },
   "qa": {
