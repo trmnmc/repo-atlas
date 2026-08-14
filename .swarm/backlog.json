@@ -262,10 +262,10 @@
         "react",
         "@testing-library/react"
       ],
-      "status": "todo",
+      "status": "done",
       "model": "sonnet",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 7 live: Cmd+K/Ctrl+K open, mktl->mocktail, Enter navigates, Escape/backdrop safe"
     },
     {
       "id": "T-011",
@@ -310,10 +310,10 @@
       "acceptance": "A dirty repo with zero commits (lastCommit null) appears in the attention queue with reason dirty (lastActivityIso falls back sensibly), and the Notices count matches the Gazetteer dirty count",
       "packages": [],
       "route_class": "core",
-      "status": "todo",
+      "status": "done",
       "model": "fable",
-      "attempts": 0,
-      "notes": "look finding medium, cycle 6: MINECRAFT-AI-BUIDLER + mocktail dirty:true absent from attention"
+      "attempts": 1,
+      "notes": "verified cycle 7 live: both zero-commit dirty repos in queue, parity 23=23"
     },
     {
       "id": "F-013",
@@ -332,9 +332,28 @@
       "acceptance": "Sparkline reading never overlaps its line, an empty-activity heatmap window shows non-overlapping month labels and no cells after the snapshot day, and an empty Strata renders an explicit empty-state message like neighboring plates",
       "packages": [],
       "status": "todo",
+      "model": "opus",
+      "attempts": 1,
+      "notes": "cycle 7 verify FAILED live (merge stands, tests green): (a) sparkline reading still struck through — relocated text at x=64,y=7 sits in the rising final segment path (56.5,14.5)->(62,2); anchor must account for the LINE SEGMENT near the text box, not just the final point y. (b) Dec/Jan overlap persists on calendar-year windows: Dec label x=137 w=39 collides Jan x=158 — suppress a leading partial-week month label when the next label is < one label-width away. (c) strata empty state stretches to container width (~90px tall) — chart-strata--empty needs the same width constraint as the non-empty chart. Evidence screenshots in .swarm/runs/cycle-007-postmerge-look-qa-*.png"
+    },
+    {
+      "id": "F-014",
+      "title": "Notices rows for zero-commit repos render epoch age (20679d) — show em-dash like the Gazetteer",
+      "kind": "fix",
+      "priority": 11,
+      "value": "M",
+      "effort": "S",
+      "deps": [],
+      "files_hint": [
+        "src/components/AttentionQueue.tsx",
+        "src/views/Overview.test.tsx"
+      ],
+      "acceptance": "An attention row whose lastActivityIso is the epoch fallback (1970-01-01) shows an em-dash (or no-commits marker) in the age slot, never a days-since-epoch figure",
+      "packages": [],
+      "status": "todo",
       "model": "sonnet",
       "attempts": 0,
-      "notes": "look findings low x4, cycle 6; folded into one item — all touch charts.test.tsx"
+      "notes": "look finding medium cycle 7"
     }
   ]
 }

@@ -1,0 +1,108 @@
+{
+  "summary": "QA against the live product: spec-only scenario author, executor, and a live-look agent; cheap look-only mode for post-merge checks; taste mode judges where the product gets boring",
+  "agentCount": 1,
+  "logs": [
+    "qa-verify @ 1786666900 | mode look | cycle-007-postmerge-look | models a/e/l: fable/sonnet/fable",
+    "qa-verify done: 0 scenario(s), 0 fail(s), 4 look finding(s)"
+  ],
+  "result": {
+    "runId": "qa-verify@1786666900",
+    "mode": "look",
+    "scenarios": [],
+    "results": [],
+    "look": {
+      "findings": [
+        {
+          "severity": "high",
+          "where": "Dashboard Fig. 4 Legend & Reckonings — sparkline end-value readings",
+          "expected": "This wave's spec: sparkline end-value readings must no longer be struck through by rising lines.",
+          "found": "Both dashboard sparklines are still struck through. The 'Commits this month' reading '322' has the final rising stroke slashing through its last digit, and the 'Most active' reading '96' has the stroke crossing the '6' so it reads like a crossed-out 'ø'. Cause visible in src/charts/Sparkline.tsx: the fix moves the reading to READING_Y_TOP (y=7) when the line ends high, but a steep rising final segment — e.g. (56.5,14.5)→(62,2) with text anchored at x=64,y=7 — passes exactly through the top-right corner where the reading now sits, so the fix relocated the text into the collision path it was meant to avoid.",
+          "evidence": "Screenshots /Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-spark-322-strikethrough.png and cycle-007-postmerge-look-qa-spark-96-strikethrough.png (zoomed clips showing the slash through the digits); captured SVG markup: <path d=\"... L56.54,14.52 L62,2\"/> with <text x=\"64\" y=\"7\" text-anchor=\"end\">322</text> — the segment crosses y=7→2 over x≈59.8→62, inside the digit box."
+        },
+        {
+          "severity": "medium",
+          "where": "Empty-activity repo drill-downs (#/repo/mocktail, #/repo/agents-alpaca-mcp-server-uv-cache-sdists-v9) — Fig. 6 Commit Soundings month labels",
+          "expected": "This wave's spec: heatmap month labels on empty-activity drill-downs must not overlap.",
+          "found": "The leading 'Dec' label overlaps 'Jan' at the left edge, rendering as an illegible 'DeJan'. DOM geometry: 'Dec' at x=137 width=39 (spans to 176) vs 'Jan' at x=158 — an 18px collision. Occurs on both zero-commit drill-downs inspected; the dashboard aggregate heatmap and active-repo drill-downs (window starting Aug) have no overlap, so the fix missed the calendar-year window case where a partial leading December week emits a 'Dec' label immediately before 'Jan'.",
+          "evidence": "Screenshot /Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-mocktail-month-label-overlap.png (shows 'DeJan'); measured label rects via browse js: overlaps=[[{txt:'Dec',x:137,w:39},{txt:'Jan',x:158,w:35}]]; full page in cycle-007-postmerge-look-qa-repo-mocktail.png and cycle-007-postmerge-look-qa-repo-sdists-v9.png."
+        },
+        {
+          "severity": "medium",
+          "where": "Dashboard Fig. 1 Notices to Mariners — zero-commit dirty repo rows (MINECRAFT-AI-BUIDLER, mocktail)",
+          "expected": "Zero-commit repos have no last-commit date, so the age column should show a dash or 'no commits' (the Gazetteer shows '—' for these same repos).",
+          "found": "Both new zero-commit dirty rows display age '20679d' — days since the Unix epoch. server/attention.js emits lastActivityIso '1970-01-01T00:00:00.000Z' for repos with no commits and the notices row renders it as an age. The badges and inclusion themselves are correct (both repos present with dirty badges; notices dirty count 23 matches Gazetteer dirty count 23 and the 'Dirty trees 23' stat).",
+          "evidence": "Screenshot /Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-notices-epoch-age.png (rows read 'dirty MINECRAFT-AI-BUIDLER main | no remote 20679d' and 'dirty mocktail main | no remote 20679d'); captured API response /api/atlas attention: [{\"repoId\":\"minecraft-ai-buidler\",\"reason\":\"dirty\",\"lastActivityIso\":\"1970-01-01T00:00:00.000Z\"}, {\"repoId\":\"mocktail\",...same}]."
+        },
+        {
+          "severity": "low",
+          "where": "#/repo/agents-alpaca-mcp-server-uv-cache-sdists-v9 — Fig. 7 Strata empty state",
+          "expected": "The 'No lines surveyed.' message (which is correctly present, satisfying the spec) should render at caption size like the sibling empty states ('No recent commits.', 'No recently touched files.') and like the non-empty strata chart, which renders at its natural 240px width.",
+          "found": "The empty-state SVG (viewBox 0 0 240 20) stretches to the full ~1190px container width, so 'No lines surveyed.' renders as an ~90px-tall banner — roughly 6x the intended size and inconsistent with every other empty state on the page. The chart-strata--empty variant is missing the width constraint the non-empty strata has.",
+          "evidence": "Screenshot /Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-repo-sdists-v9.png (giant 'No lines surveyed.' text); captured markup: <svg class=\"chart-strata chart-strata--empty\" viewBox=\"0 0 240 20\"><text x=\"0\" y=\"14\">No lines surveyed.</text></svg>; compare mocktail's non-empty strata bar rendering at ~240px in cycle-007-postmerge-look-qa-repo-mocktail.png."
+        }
+      ],
+      "screenshots": [
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-dashboard-top.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-fig4-sparklines.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-spark-322-strikethrough.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-spark-96-strikethrough.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-palette-open.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-palette-narrowed.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-repo-mocktail.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-mocktail-month-label-overlap.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-repo-sdists-v9.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-007-postmerge-look-qa-notices-epoch-age.png"
+      ],
+      "server_log_tail": "> repo-atlas@0.1.0 start\n> vite build && node server/index.js\n\nvite v8.2.1 building client environment for production...\ntransforming... 38 modules transformed.\ndist/index.html                   1.07 kB | gzip:  0.59 kB\ndist/assets/index-CaFJeF-z.css   18.50 kB | gzip:  3.72 kB\ndist/assets/index-Me2Oo1BL.js   223.48 kB | gzip: 69.92 kB\nbuilt in 76ms\n[repo-atlas] listening on http://localhost:4600\n\n(No server-side errors during the session. Page console: no errors after clearing a stale pre-boot ERR_CONNECTION_REFUSED buffer from the browse daemon. Verified as PASSING: Cmd+K and Ctrl+K both open the palette; fuzzy query 'mktl' narrows to mocktail first; Enter navigates to #/repo/mocktail; row click navigates to #/repo/swarm; Escape and backdrop click close without navigating (hash unchanged). Aggregate heatmap's last cell is data-daykey 2026-08-13 — no cells after snapshot date. Notices includes both zero-commit dirty repos with dirty badges; dirty count 23 = Gazetteer 23 = 'Dirty trees 23'. Fig.2 day-click narrows Fig.3 ('2026-08-08 — 114 commits that week'). Server killed at end; port 4600 confirmed clear.)"
+    },
+    "taste": null,
+    "agents_used": 1,
+    "dead_agents": [],
+    "timestamp": "1786666900"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Author"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Execute"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Look"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 4,
+      "title": "Taste"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "live-look",
+      "phaseIndex": 3,
+      "phaseTitle": "Look",
+      "agentId": "aa22a5df6931dd6a6",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786666462679,
+      "queuedAt": 1786666461181,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "> repo-atlas@0.1.0 start > vite build && node server/index.…",
+      "promptPreview": "You are the live-look agent in an overnight autonomous swarm — the one\nagent whose ONLY job is to LOOK at the running product the way a human\nuser would. Test suites can be green while the rendered app is garbage\n(two modules shadowing one global put \"new moon - 82% illuminated\" where\na score belonged, with 28/28 tests passing and no console error). You are\nthe defense against that class of bug.\n\n…",
+      "lastProgressAt": 1786666978238,
+      "tokens": 84284,
+      "toolCalls": 53,
+      "durationMs": 515559,
+      "resultPreview": "{\"findings\":[{\"severity\":\"high\",\"where\":\"Dashboard Fig. 4 Legend & Reckonings — sparkline end-value readings\",\"expected\":\"This wave's spec: sparkline end-value readings must no longer be struck through by rising lines.\",\"found\":\"Both dashboard sparklines are still struck through. The 'Commits this month' reading '322' has the final rising stroke slashing through its last digit, and the 'Most activ…"
+    }
+  ],
+  "totalTokens": 84284,
+  "totalToolCalls": 53
+}

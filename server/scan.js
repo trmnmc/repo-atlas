@@ -157,9 +157,9 @@ export async function scan(rootDir, opts = {}) {
   const snapshot = {
     generatedAt: nowIso,
     repos,
-    // buildAttention derives staleness from lastCommit.iso; a zero-commit
-    // repo (lastCommit null) has no activity to rank and is excluded.
-    attention: buildAttention(repos.filter((r) => r.lastCommit !== null), nowIso),
+    // buildAttention handles zero-commit repos itself (dirty ones rank last
+    // in their band via the epoch fallback) — pass the full repo list.
+    attention: buildAttention(repos, nowIso),
   };
   emit(onProgress, { phase: 'done', done, total });
   return snapshot;

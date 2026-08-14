@@ -26,6 +26,7 @@ import { useTheme } from './hooks/useTheme.ts';
 import { Overview } from './views/Overview.tsx';
 import type { AtlasRepo, AtlasSnapshot } from './views/Overview.tsx';
 import { RepoDetail } from './views/RepoDetail.tsx';
+import { CommandPalette, useCommandPalette } from './components/CommandPalette.tsx';
 import { CSS, dayKey } from '../shared/contract.js';
 
 export type Route = { kind: 'overview' } | { kind: 'repo'; id: string };
@@ -131,6 +132,7 @@ export function App({ transport }: AppProps = {}) {
   }, []);
 
   const snapshot = asAtlasSnapshot(rawSnapshot);
+  const { open, setOpen } = useCommandPalette();
 
   const aggregate = useMemo(
     () => aggregateCommitDays(snapshot?.repos ?? []),
@@ -198,6 +200,12 @@ export function App({ transport }: AppProps = {}) {
       <footer className="app__colophon">
         <span>Repo Atlas — surveyed locally; no network, no remotes consulted.</span>
       </footer>
+      <CommandPalette
+        repos={snapshot?.repos ?? []}
+        open={open}
+        onClose={() => setOpen(false)}
+        onNavigate={openRepo}
+      />
     </div>
   );
 }

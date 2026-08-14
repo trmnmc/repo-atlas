@@ -1,0 +1,124 @@
+{
+  "summary": "Parallel feature builders in isolated worktrees; returns claims for conductor verification",
+  "agentCount": 3,
+  "logs": [
+    "wave @ 1786665489 [F-012 \"Attention queue omits dirty repos whose lastCommit is null (zero-commit repos) — include dirty repos regardless of commit history\" (fable/high), F-013 \"Chart edge cases from look pass: Sparkline reading collides with rising line; empty-window Heatmap month labels overlap; Heatmap renders future days as observed; Strata empty state is a blank block\" (sonnet/high), T-010 \"Cmd+K fuzzy repo-jump palette layered on j/k keyboard navigation\" (sonnet/high)]"
+  ],
+  "result": {
+    "wave": [
+      {
+        "itemId": "F-012",
+        "status": "done",
+        "branch": "wave-665489-F-012",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-012.Fnc9pC",
+        "files_changed": [
+          "server/attention.js",
+          "server/attention.test.js"
+        ],
+        "summary": "Fixed buildAttention/classify in server/attention.js so dirty zero-commit repos (lastCommit null) always produce an attention entry with reason 'dirty': classify now guards stale with `repo.lastCommit !== null` (a commit-less repo can never be stale; dirty/unpushed/no-remote rules unchanged), and buildAttention emits lastActivityIso = '1970-01-01T00:00:00.000Z' (documented ZERO_COMMIT_ACTIVITY_ISO constant) as the deterministic fallback — Date.parse reads it as 0, so through the frozen attentionComparator commit-less dirty repos rank after equally-dirty repos with real activity and tie stably in input order. Extended server/attention.test.js with 8 new tests (TDD: written first, all 8 failed with the original TypeError): zero-commit classify matrix incl. no-remote combos, epoch pin, full-band ordering rule, stable-tie rule, and dirty-count parity. IMPORTANT residual for the conductor: server/scan.js line 162 still pre-filters `repos.filter((r) => r.lastCommit !== null)` before calling buildAttention; scan.js was explicitly out of my file scope per the item instructions, so for the snapshot-level acceptance criterion (MINECRAFT-AI-BUIDLER/mocktail appearing in snapshot.attention and Notices==Gazetteer dirty count) that now-unnecessary filter must be removed — a one-line deletion in scan.js's attention assembly; buildAttention handles the unfiltered array correctly as of this change.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-012.Fnc9pC\n\n\n Test Files  9 passed (9)\n      Tests  181 passed (181)\n   Start at  19:01:52\n   Duration  2.74s (transform 502ms, setup 0ms, import 1.00s, tests 6.82s, environment 2.68s)"
+      },
+      {
+        "itemId": "F-013",
+        "status": "done",
+        "branch": "wave-665489-F-013",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.S9Jsdy",
+        "files_changed": [
+          "src/charts/Heatmap.tsx",
+          "src/charts/Sparkline.tsx",
+          "src/charts/Strata.tsx",
+          "src/charts/charts.test.tsx"
+        ],
+        "summary": "Fixed all 4 look-pass chart edge cases within the strict file scope (no tokens.css/contract/fixtures/package.json touched).\n\n1. Sparkline.tsx: the end-value reading was hard-anchored at (WIDTH, HEIGHT-1) unconditionally. Now anchors relative to the final point's y — reading goes near the top (y=PAD+5=7) when the line ends in the chart's upper half (high reading, where a rising line's final approach previously struck through the fixed bottom-anchored numerals), and keeps the original bottom anchor (y=HEIGHT-1=17) when the line ends low. Added a test with a monotonically-rising series (final point at the chart top, cy=2) asserting the reading moved off the old fixed y=17 and sits with a >=4-unit clear gap from the dot.\n\n2. Heatmap.tsx (month labels): confirmed via code inspection and targeted tests that the 53-week window/month-label derivation was already structurally independent of `commitDays` (it only depends on `endDayKey`), so an empty activity map with a valid, explicit endDayKey already produces strictly-increasing, non-overlapping month-label x positions. Added a regression test anchored at a Dec/Jan boundary (endDayKey=\"2026-01-04\") asserting strictly increasing x and >= one-column-width gaps between all labels, locking in this behavior.\n\n3. Heatmap.tsx (future days): the real bug — cells strictly after `endDayKey` (i.e. within the final week's remaining days) rendered as normal observed \"0 commits\" cells with full aria-labels regardless of whether the snapshot day was actually reached. Fixed by computing `isFuture = hasKnownEnd && key > endDayKey` per cell and omitting the `<rect>` entirely for future cells (only when endDayKey is valid — the deterministic epoch fallback for missing/invalid endDayKey keeps rendering the full 371-cell rectangle unchanged, since there's no real \"future\" to exclude, preserving the existing \"renders safely on empty data\" test). Added tests verifying a Tuesday endDayKey correctly omits the trailing Wed-Sat future cells (371-4=367 cells) with no future dayKey rendering any element at all, plus a control test confirming the invalid-endDayKey fallback still renders the full rectangle.\n\n4. Strata.tsx: empty `loc` previously rendered one large low-opacity rect (reads as broken). Now renders an explicit \"No lines surveyed.\" text message, reusing the existing `.chart-timeline__empty-label` class from charts.css (no new CSS needed, staying in scope) for the same muted-ink styling Timeline's own empty state uses. Updated the pre-existing \"renders safely on empty loc\" test's stale assertion (which encoded the old buggy 1-band behavior) to assert zero bands and the new message text, per the conductor's explicit note that this test needed extending to match the fixed behavior.\n\nFull suite: 177 tests passed across 9 files (up from prior baseline of 173 — 4 new/extended chart tests), with every pre-existing Heatmap/Timeline/Sparkline test (all the hand-computed fixture-driven ones) still green and unmodified except the one Strata assertion the acceptance criteria explicitly directed to update.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.S9Jsdy\n\n Test Files  9 passed (9)\n      Tests  177 passed (177)\n   Start at  19:12:28\n   Duration  4.45s (transform 956ms, setup 0ms, import 1.97s, tests 11.34s, environment 5.56s)"
+      },
+      {
+        "itemId": "T-010",
+        "status": "done",
+        "branch": "wave-665489-T-010",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-010.pzJ9LZ",
+        "files_changed": [
+          "src/components/CommandPalette.tsx",
+          "src/components/CommandPalette.test.tsx",
+          "src/components/paletteWiring.md"
+        ],
+        "summary": "Built src/components/CommandPalette.tsx as a self-contained component: exports `CommandPalette` (props: repos: RepoSummary[] {id,name,path}, open, onClose, onNavigate) and the `useCommandPalette()` hook, which owns the global Cmd+K/Ctrl+K keydown listener and returns {open, setOpen}. Fuzzy matching is a dependency-free subsequence scorer (`fuzzyScore`/`rankRepos`, both exported) over \"name path\", rewarding early/consecutive-run matches; empty query falls back to full name-sorted list. ArrowUp/Down moves the active row, Enter fires onNavigate(repo.id) + onClose, Escape closes without navigating, clicking the backdrop closes without navigating, clicking a row navigates, and the search input carries autoFocus (the component unmounts fully while closed, so a fresh mount is exactly when autoFocus fires).\n\nStyling is fully self-contained via an inline `<style>` block built only from tokens.css custom properties (color/space/type — no bespoke values), using the frozen contract's CSS.plate / CSS.palette / CSS.gazetteerRow / CSS.sounding render-vocabulary classes as the base and extending them with `palette-cmdk__*` modifier classes, since src/styles/* is frozen/out of scope for this item and no new stylesheet file could be added.\n\nDocumented the exact two-line App.tsx wiring both in a header comment at the top of CommandPalette.tsx and in src/components/paletteWiring.md (App.tsx itself was not touched — it's out of scope/owned by another item; the conductor applies the wiring).\n\nCommandPalette.test.tsx (14 tests): fuzzyScore/rankRepos unit tests; a mounted host component exercising the exported useCommandPalette hook (Cmd+K opens, Ctrl+K also opens, second press toggles closed — mandatory hook-mount test); typing 'swm' narrows to only the swarm-ish fixture repo; Enter navigates to the top/selected match id and closes; ArrowDown then Enter picks the next row; Escape closes without navigating; backdrop click closes without navigating; row click navigates; autofocus on open.\n\nSymlinked the main repo's node_modules into the worktree (untracked, per instructions) before running `npm test`; only the three in-scope files were git-added and committed (the node_modules symlink was left untracked, matching the .gitignore intent for node_modules even though a symlink doesn't match the `node_modules/`-suffixed gitignore pattern literally).",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-010.pzJ9LZ\n\n\n Test Files  10 passed (10)\n      Tests  187 passed (187)\n   Start at  19:05:21\n   Duration  3.19s (transform 790ms, setup 0ms, import 1.78s, tests 8.84s, environment 3.35s)\n\n(CommandPalette.test.tsx alone, verbose: 14/14 passed, e.g.\n ✓ useCommandPalette > mounts cleanly closed, and opens on a Cmd+K (or Ctrl+K) keydown\n ✓ CommandPalette > typing narrows the results fuzzily (\"swm\" matches the swarm-ish repo only)\n ✓ CommandPalette > Enter navigates to the top match id and closes\n ✓ CommandPalette > Escape closes without navigating)"
+      }
+    ],
+    "dead_items": [],
+    "timestamp": "1786665489"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder-F-012",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "acf13c15ef2c8ea77",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786665551381,
+      "queuedAt": 1786665549669,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "F-012",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-F-012.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786665741991,
+      "tokens": 52472,
+      "toolCalls": 18,
+      "durationMs": 190610,
+      "resultPreview": "{\"itemId\":\"F-012\",\"status\":\"done\",\"branch\":\"wave-665489-F-012\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-012.Fnc9pC\",\"files_changed\":[\"server/attention.js\",\"server/attention.test.js\"],\"summary\":\"Fixed buildAttention/classify in server/attention.js so dirty zero-commit repos (lastCommit null) always produce an attention entry with reason 'dirty': classify now guards stale …"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "builder-F-013",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "ae1dcd6b2f2f2a898",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786665551604,
+      "queuedAt": 1786665549669,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "F-013",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-F-013.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786666368935,
+      "tokens": 121258,
+      "toolCalls": 54,
+      "durationMs": 817331,
+      "resultPreview": "{\"itemId\":\"F-013\",\"status\":\"done\",\"branch\":\"wave-665489-F-013\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-013.S9Jsdy\",\"files_changed\":[\"src/charts/Heatmap.tsx\",\"src/charts/Sparkline.tsx\",\"src/charts/Strata.tsx\",\"src/charts/charts.test.tsx\"],\"summary\":\"Fixed all 4 look-pass chart edge cases within the strict file scope (no tokens.css/contract/fixtures/package.json touched).…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "builder-T-010",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a62d10c8099a62312",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786665551386,
+      "queuedAt": 1786665549669,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-010",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-010.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786665938799,
+      "tokens": 97690,
+      "toolCalls": 41,
+      "durationMs": 387413,
+      "resultPreview": "{\"itemId\":\"T-010\",\"status\":\"done\",\"branch\":\"wave-665489-T-010\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-010.pzJ9LZ\",\"files_changed\":[\"src/components/CommandPalette.tsx\",\"src/components/CommandPalette.test.tsx\",\"src/components/paletteWiring.md\"],\"summary\":\"Built src/components/CommandPalette.tsx as a self-contained component: exports `CommandPalette` (props: repos: RepoSu…"
+    }
+  ],
+  "totalTokens": 271420,
+  "totalToolCalls": 113
+}
