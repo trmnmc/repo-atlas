@@ -3,7 +3,7 @@
   "project_dir": "/Users/truman/Projects/repo-atlas",
   "created_at": "2026-08-13T17:22:37-05:00",
   "phase": "VALUE_LOOP",
-  "cycle": 13,
+  "cycle": 14,
   "run_cmd": "npm start",
   "test_cmd": "npm test",
   "preview": {
@@ -34,6 +34,12 @@
       "desc": "SSE /api/scan-events ends the 200 stream after replay -> EventSource reconnects ~3s forever, replaying stale done events (scanning-state flapping, endless /api/atlas refetches). Reproduced: 4 done events from ONE scan in 12s. Fix queued as R-015. [RESOLVED cycle 11 — conductor probe: 1 done event in 20s persistent window]",
       "severity": "resolved",
       "cycle_found": 10
+    },
+    {
+      "id": "KI-2",
+      "desc": "Flaky server test observed once + once under shuffle: index.test.js cache-seed-race toMatch got null content-type on SSE connect; did not recur in 17 runs. Pre-existing, unrelated to P-018v2. Needs a deflake look.",
+      "severity": "low",
+      "cycle_found": 14
     }
   ],
   "counters": {
@@ -44,9 +50,9 @@
     "window_tokens_attributed": 0
   },
   "last_cycle": {
-    "n": 13,
-    "work": "taste pass (fable, 14 min)",
-    "outcome": "wears-thin; 1 fundamental + 4 notable + 3 minor -> D-016 D-017 P-018 + deferred P-019",
+    "n": 14,
+    "work": "depth wave [D-016 D-017 P-018] + P-018 reland",
+    "outcome": "3 verified (taste fundamental FIXED, live-verified); 1 revert then clean reland",
     "commit": ""
   },
   "qa": {

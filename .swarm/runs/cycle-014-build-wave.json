@@ -1,0 +1,124 @@
+{
+  "summary": "Parallel feature builders in isolated worktrees; returns claims for conductor verification",
+  "agentCount": 3,
+  "logs": [
+    "wave @ 1786673469 [D-016 \"Working-tree state in the scan: gitFacts/scan emit workingTree per repo (taste fundamental, server half)\" (fable/high), D-017 \"Fig. 9a — Unlogged Cargo: dirty repo drill-down shows uncommitted files + header counts (taste fundamental, UI half)\" (opus/high), P-018 \"Preserve Notices queue selection across drill-down round-trips\" (sonnet/medium)]"
+  ],
+  "result": {
+    "wave": [
+      {
+        "itemId": "D-016",
+        "status": "done",
+        "branch": "wave-673469-D-016",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-016.ndmbxk",
+        "files_changed": [
+          "server/gitFacts.js",
+          "server/gitFacts.test.js",
+          "server/scan.js",
+          "server/scan.test.js"
+        ],
+        "summary": "Added the frozen-shape additive workingTree field to every RepoSummary: gitFacts.js now parses the SAME single `git status --porcelain` call that feeds `dirty` into {staged, modified, untracked, truncated} via a new parseWorkingTree helper (XY codes: `??` -> untracked, X non-space non-? -> staged, Y non-space -> modified, MM lands in both lists; each list capped at 50 with truncated=true when cut; null/clean status degrades to empty lists, truncated:false). shared/contract.js untouched — the shape is documented as an ADDITIVE runtime field in a WorkingTree JSDoc typedef in gitFacts.js, and gitFacts' return type is Pick<RepoSummary,...> & {workingTree}. scan.js already spreads gitFacts output into the summary, so the field passes through; a comment documents that. TDD: 8 new tests written first and confirmed failing (workingTree undefined), then made green — gitFacts.test.js covers clean repo, untracked-only, staged-only, modified-only, MM staged+modified same file (with a porcelain precondition assert of 'MM both.txt'), the 55-untracked cap (50 entries in exact porcelain order + truncated:true), and empty-repo/non-repo tolerance; scan.test.js gains a snapshot passthrough test asserting dirty alpha's workingTree.untracked matches `git status --porcelain` output exactly and clean beta carries empty lists. Full suite 216/216 green (was 208 tests before). node_modules symlinked from the main repo per instructions, left uncommitted. Commit 6e84a1c on wave-673469-D-016; worktree left in place for the conductor.",
+        "self_test_output": " RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-016.ndmbxk\n\n\n Test Files  10 passed (10)\n      Tests  216 passed (216)\n   Start at  21:14:36\n   Duration  4.78s (transform 1.30s, setup 0ms, import 2.39s, tests 13.36s, environment 5.97s)"
+      },
+      {
+        "itemId": "D-017",
+        "status": "done",
+        "branch": "wave-673469-D-017",
+        "worktree": "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-017.PN5nsU",
+        "files_changed": [
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-017.PN5nsU/src/views/RepoDetail.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-017.PN5nsU/src/views/RepoDetail.test.tsx",
+          "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-017.PN5nsU/src/styles/detail.css"
+        ],
+        "summary": "Worktree provisioned from /Users/truman/Projects/repo-atlas (git-common-dir asserted inside its .git; .swarm/SPEC.md present). RepoDetail now renders \"Fig. 9a — Unlogged Cargo\" for dirty repos only, positioned between Fig. 8 Ship's Log and Fig. 9 Recent Workings, listing repo.workingTree grouped staged / modified / untracked — small-caps group caption, per-group count (data-cargo-group=\"staged|modified|untracked\", .cargo-group__count), monospace ink paths, and \"(list truncated at 50)\" when workingTree.truncated. A file that is both staged and modified appears in both groups. The field is treated as additive: a dirty repo with no workingTree (stale cache) still gets the plate carrying \"uncommitted work aboard — rescan for the manifest\", and I extended that same fallback to the unspecified contradictory case (dirty + present-but-all-empty manifest) rather than rendering an empty plate. Clean repos render no Fig. 9a even if a workingTree is attached. The header dirty badge becomes \"dirty — 2 modified, 1 untracked\" (empty groups omitted), stays plain \"dirty\" without a manifest; I included a \"n staged\" segment in the same omit-zeros rule, which is a superset of the acceptance wording. detail.css gained a .cargo-* block built only from tokens.css vars — no raw hex, no new hues, vermilion still spent only on the header badge (a test asserts no advisory class exists anywhere inside the 9a plate). Missing lists are tolerated (workingTree[group] ?? []) so a half-shaped cached snapshot cannot crash the drill-down. TDD: 11 new tests written red first, then made green. ONE existing test changed premise: \"renders all five captioned plates, in order\" mounted the dirty ember-ledger fixture, which now legitimately has six plates — I updated it to assert the six-plate order including Fig. 9a and added a companion test pinning exactly five plates for the clean meridian repo, so the original claim is still covered rather than weakened. No assertion was loosened and nothing was skipped. Suite went 208 -> 219 passing, all 10 files green; `npm run build` also succeeds. node_modules was symlinked to the origin repo for the test run and left untracked (uncommitted); only the three in-scope files are in the commit.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-017.PN5nsU\n\n\n Test Files  10 passed (10)\n      Tests  219 passed (219)\n   Start at  21:17:12\n   Duration  3.76s (transform 762ms, setup 0ms, import 1.44s, tests 10.25s, environment 3.33s)"
+      },
+      {
+        "itemId": "P-018",
+        "status": "done",
+        "branch": "wave-673469-P-018",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-P-018.OMvRwC",
+        "files_changed": [
+          "src/components/AttentionQueue.tsx",
+          "src/views/Overview.test.tsx"
+        ],
+        "summary": "Fixed the Notices queue losing its cursor on drill-down round trips without touching App.tsx or useKeyboardNav (both frozen). AttentionQueue.tsx now persists the active row's repoId to sessionStorage (keyed 'atlas-notices-selection', with a module-level fallback if storage throws) whenever the keyboard cursor moves, and restores it on mount by locating that repoId in the current rows (falling back to index 0 if the repo is gone or on first-ever mount), pushing it into useKeyboardNav via its own setActiveIndex since the hook has no initial-index param. A subtlety surfaced during TDD: the pre-existing test 'drills down on click and on j / Enter keyboard navigation' clicks row 2 (tide-tables), goes Back, then does j+Enter expecting to land on field-notes (row 1) — i.e. it assumes the cursor reset to 0 after a click-driven drill-down. Persisting on every cursor change (including clicks) breaks that assertion, which I was told not to modify. Resolved by scoping persistence to keyboard-driven cursor movement only (j/k, and the restore itself) — a click still drills in and still visually highlights the clicked row for the instant before navigation, but doesn't move/persist the cursor, since a click is a direct action rather than a cursor placement. This keeps the old test's semantics (click-drill-then-Back-then-j starts fresh at row 0) while satisfying the acceptance criterion for the keyboard round trip (taste finding: 'j+Enter round-trips all reopened the same repo'). Added a new mount test in Overview.test.tsx: renders Overview, presses j j (cursor to tide-tables), unmounts, remounts, and asserts the restored active row is tide-tables (not row 0), then that a further j advances to old-survey (the next row) — proving the cursor genuinely continued rather than restarting. No existing assertions were modified. Full suite: 209/209 passing across 10 files (node_modules was untracked; symlinked from /Users/truman/Projects/repo-atlas/node_modules before running npm test, per the conductor note).",
+        "self_test_output": "RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-P-018.OMvRwC\n\n Test Files  10 passed (10)\n      Tests  209 passed (209)\n   Start at  21:17:14\n   Duration  3.89s (transform 1.00s, setup 0ms, import 2.17s, tests 12.56s, environment 4.76s)"
+      }
+    ],
+    "dead_items": [],
+    "timestamp": "1786673469"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder-D-016",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a8678801aef20395a",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786673504870,
+      "queuedAt": 1786673502998,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "D-016",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-D-016.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786673704666,
+      "tokens": 66780,
+      "toolCalls": 23,
+      "durationMs": 199796,
+      "resultPreview": "{\"itemId\":\"D-016\",\"status\":\"done\",\"branch\":\"wave-673469-D-016\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-016.ndmbxk\",\"files_changed\":[\"server/gitFacts.js\",\"server/gitFacts.test.js\",\"server/scan.js\",\"server/scan.test.js\"],\"summary\":\"Added the frozen-shape additive workingTree field to every RepoSummary: gitFacts.js now parses the SAME single `git status --porcelain` call t…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "builder-D-017",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a4095907e84743c03",
+      "model": "claude-opus-5[1m]",
+      "state": "done",
+      "startedAt": 1786673504660,
+      "queuedAt": 1786673502998,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "D-017",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-D-017.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786673874063,
+      "tokens": 85837,
+      "toolCalls": 37,
+      "durationMs": 369403,
+      "resultPreview": "{\"itemId\":\"D-017\",\"status\":\"done\",\"branch\":\"wave-673469-D-017\",\"worktree\":\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-017.PN5nsU\",\"files_changed\":[\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-017.PN5nsU/src/views/RepoDetail.tsx\",\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-D-017.PN5nsU/src/views/RepoDetail.test.tsx\",\"/private/var/folders/2…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "builder-P-018",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a54ecf244badb90ac",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786673504739,
+      "queuedAt": 1786673502998,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "P-018",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-P-018.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786673850076,
+      "tokens": 72564,
+      "toolCalls": 31,
+      "durationMs": 345337,
+      "resultPreview": "{\"itemId\":\"P-018\",\"status\":\"done\",\"branch\":\"wave-673469-P-018\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-P-018.OMvRwC\",\"files_changed\":[\"src/components/AttentionQueue.tsx\",\"src/views/Overview.test.tsx\"],\"summary\":\"Fixed the Notices queue losing its cursor on drill-down round trips without touching App.tsx or useKeyboardNav (both frozen). AttentionQueue.tsx now persists the …"
+    }
+  ],
+  "totalTokens": 225181,
+  "totalToolCalls": 91
+}

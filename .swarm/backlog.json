@@ -392,10 +392,10 @@
       "acceptance": "A dirty fixture repo’s RepoSummary carries workingTree lists matching git status --porcelain exactly (staged/modified/untracked, capped at 50 each with a total count), and clean repos carry empty lists",
       "packages": [],
       "route_class": "core",
-      "status": "todo",
+      "status": "done",
       "model": "fable",
-      "attempts": 0,
-      "notes": "taste cycle 13 fundamental"
+      "attempts": 1,
+      "notes": "verified cycle 14 live: swarm workingTree 3 modified 3 untracked == git porcelain 6 entries; clean repo empty lists"
     },
     {
       "id": "D-017",
@@ -412,10 +412,10 @@
       ],
       "acceptance": "Opening a dirty repo’s plate shows an Unlogged Cargo section listing modified/untracked/staged files with counts (and the dirty header badge shows ‘n modified, n untracked’); clean repos show no such section",
       "packages": [],
-      "status": "todo",
+      "status": "done",
       "model": "opus",
-      "attempts": 0,
-      "notes": "taste cycle 13 fundamental"
+      "attempts": 1,
+      "notes": "verified cycle 14 live: Fig 9a between Fig 8/9, badge dirty — 3 modified, 3 untracked"
     },
     {
       "id": "P-018",
@@ -431,10 +431,10 @@
       ],
       "acceptance": "After Enter into a repo plate and Back, the queue selection sits on the previously selected row (j advances to the next), verified in a mount test",
       "packages": [],
-      "status": "todo",
+      "status": "done",
       "model": "sonnet",
-      "attempts": 0,
-      "notes": "taste cycle 13"
+      "attempts": 2,
+      "notes": "verified cycle 14: v2 branch (module-fallback removed, storage-only + test hygiene) 228/228 x18 runs"
     },
     {
       "id": "P-019",
