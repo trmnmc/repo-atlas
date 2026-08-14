@@ -28,7 +28,8 @@ let nextId = 0;
 /**
  * Minimal RepoSummary for the classifier: only the fields the engine reads
  * (id, dirty, upstream, lastCommit.iso), plus a unique id per call.
- * @param {{ id?: string, dirty?: boolean, upstream?: object, lastIso?: string }} opts
+ * Pass `lastIso: null` for a zero-commit repo (lastCommit null).
+ * @param {{ id?: string, dirty?: boolean, upstream?: object, lastIso?: string | null }} opts
  */
 function mkRepo({
   id = `repo-${nextId++}`,
@@ -44,7 +45,8 @@ function mkRepo({
     detached: false,
     dirty,
     upstream,
-    lastCommit: { iso: lastIso, subject: 'fixture commit', author: 'T. Surveyor' },
+    lastCommit:
+      lastIso === null ? null : { iso: lastIso, subject: 'fixture commit', author: 'T. Surveyor' },
   };
 }
 
@@ -163,6 +165,85 @@ describe('classify — upstream none is NEVER unpushed', () => {
       reasons: ['stale'],
       displayState: 'stale',
     });
+  });
+});
+
+describe('classify — zero-commit repos (lastCommit null)', () => {
+  it('dirty zero-commit repo -> reasons [dirty], displayState dirty (no throw)', () => {
+    expect(classify(mkRepo({ dirty: true, lastIso: null }), NOW)).toEqual({
+      reasons: ['dirty'],
+      displayState: 'dirty',
+    });
+  });
+
+  it('a zero-commit repo can never be stale — clean one is plain ok', () => {
+    expect(classify(mkRepo({ lastIso: null }), NOW)).toEqual({
+      reasons: [],
+      displayState: 'ok',
+    });
+  });
+
+  it('clean zero-commit repo with no remote surfaces the no-remote marker only', () => {
+    expect(classify(mkRepo({ lastIso: null, upstream: NO_REMOTE }), NOW)).toEqual({
+      reasons: [],
+      displayState: 'no-remote',
+    });
+  });
+
+  it('dirty zero-commit no-remote repo is dirty, never unpushed', () => {
+    expect(classify(mkRepo({ dirty: true, lastIso: null, upstream: NO_REMOTE }), NOW)).toEqual({
+      reasons: ['dirty'],
+      displayState: 'dirty',
+    });
+  });
+});
+
+describe('buildAttention — zero-commit dirty repos (the live-look regression)', () => {
+  it('a dirty zero-commit repo ALWAYS gets an entry, lastActivityIso pinned to epoch', () => {
+    expect(buildAttention([mkRepo({ id: 'minecraft', dirty: true, lastIso: null })], NOW)).toEqual([
+      { repoId: 'minecraft', reason: 'dirty', lastActivityIso: '1970-01-01T00:00:00.000Z' },
+    ]);
+  });
+
+  it('ordering rule: commit-less dirty repos sort after equally-dirty repos with commits, before other bands', () => {
+    const repos = [
+      mkRepo({ id: 'mocktail', dirty: true, lastIso: null, upstream: NO_REMOTE }),
+      mkRepo({ id: 'stale-repo', lastIso: '2026-01-10T14:00:00.000Z' }),
+      mkRepo({ id: 'dirty-old', dirty: true, lastIso: '2026-07-01T08:00:00.000Z' }),
+      mkRepo({ id: 'unpushed-repo', upstream: TRACKED_AHEAD, lastIso: '2026-07-25T12:00:00.000Z' }),
+      mkRepo({ id: 'dirty-new', dirty: true, lastIso: '2026-07-31T09:00:00.000Z' }),
+    ];
+    expect(buildAttention(repos, NOW).map((e) => e.repoId)).toEqual([
+      'dirty-new',
+      'dirty-old',
+      'mocktail', // dirty band, epoch fallback ranks last within the band
+      'unpushed-repo',
+      'stale-repo',
+    ]);
+  });
+
+  it('two commit-less dirty repos share the epoch instant and keep stable input order', () => {
+    const repos = [
+      mkRepo({ id: 'minecraft-ai-buidler', dirty: true, lastIso: null }),
+      mkRepo({ id: 'mocktail', dirty: true, lastIso: null }),
+    ];
+    expect(buildAttention(repos, NOW).map((e) => e.repoId)).toEqual([
+      'minecraft-ai-buidler',
+      'mocktail',
+    ]);
+  });
+
+  it('every dirty repo appears regardless of commit history — count parity with the gazetteer', () => {
+    const repos = [
+      mkRepo({ id: 'with-commits', dirty: true }),
+      mkRepo({ id: 'zero-commits', dirty: true, lastIso: null }),
+      mkRepo({ id: 'clean-zero-commits', lastIso: null }),
+      mkRepo({ id: 'clean' }),
+    ];
+    const queue = buildAttention(repos, NOW);
+    const dirtyCount = repos.filter((r) => r.dirty).length;
+    expect(queue.filter((e) => e.reason === 'dirty')).toHaveLength(dirtyCount);
+    expect(queue.map((e) => e.repoId).sort()).toEqual(['with-commits', 'zero-commits']);
   });
 });
 
