@@ -290,10 +290,10 @@
       ],
       "acceptance": "From a clean checkout with dist deleted, npm start serves the dashboard at http://localhost:4600 in under 2 seconds from cache, listing every git repo under ~/Projects with correct branch/dirty/last-commit, working drill-down and heatmap day-click cross-filter, and a Rescan that updates data live without restarting the server",
       "packages": [],
-      "status": "todo",
+      "status": "done",
       "model": "sonnet",
-      "attempts": 0,
-      "notes": ""
+      "attempts": 1,
+      "notes": "verified cycle 9: README fact-checked against code (port, scripts, strict-90d, cache path)"
     },
     {
       "id": "F-012",
@@ -350,10 +350,10 @@
       ],
       "acceptance": "An attention row whose lastActivityIso is the epoch fallback (1970-01-01) shows an em-dash (or no-commits marker) in the age slot, never a days-since-epoch figure",
       "packages": [],
-      "status": "todo",
+      "status": "done",
       "model": "opus",
-      "attempts": 1,
-      "notes": "builder died cycle 8 (StructuredOutput retry cap); escalated to opus, still todo"
+      "attempts": 2,
+      "notes": "verified cycle 9: em-dash renders for epoch fallback, 22/22 Overview tests"
     }
   ]
 }

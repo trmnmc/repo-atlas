@@ -2,8 +2,8 @@
   "idea": "local mission-control dashboard for ~/Projects: scan every git repo, attention queue first, then heatmap/timeline/drill-down",
   "project_dir": "/Users/truman/Projects/repo-atlas",
   "created_at": "2026-08-13T17:22:37-05:00",
-  "phase": "BUILD",
-  "cycle": 8,
+  "phase": "REVIEW",
+  "cycle": 9,
   "run_cmd": "npm start",
   "test_cmd": "npm test",
   "preview": {
@@ -28,13 +28,13 @@
     "consecutive_no_value": 0,
     "consecutive_failures": 0,
     "k_current": 5,
-    "wave_streak": 0,
+    "wave_streak": 1,
     "window_tokens_attributed": 0
   },
   "last_cycle": {
-    "n": 8,
-    "work": "build-wave retry [F-013 opus, F-014]",
-    "outcome": "F-013 verified live; F-014 builder died -> opus",
+    "n": 9,
+    "work": "build-wave [F-014 T-011]",
+    "outcome": "2 verified; backlog fully done -> REVIEW phase",
     "commit": ""
   },
   "qa": {

@@ -1,0 +1,87 @@
+{
+  "summary": "Parallel feature builders in isolated worktrees; returns claims for conductor verification",
+  "agentCount": 2,
+  "logs": [
+    "wave @ 1786668551 [F-014 \"Notices rows for zero-commit repos render epoch age (20679d) — show em-dash like the Gazetteer\" (opus/medium), T-011 \"Integration polish: README with survey-folio voice + accurate run/test/architecture docs\" (sonnet/medium)]"
+  ],
+  "result": {
+    "wave": [
+      {
+        "itemId": "F-014",
+        "status": "done",
+        "branch": "wave-668551-F-014",
+        "worktree": "/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-014.8uK3Gb",
+        "files_changed": [
+          "src/components/AttentionQueue.tsx",
+          "src/views/Overview.test.tsx"
+        ],
+        "summary": "Added a local `ageLabel(iso, nowIso)` helper in src/components/AttentionQueue.tsx that returns the Gazetteer's no-commit marker '—' when the activity instant parses at or before 2000-01-01 (which covers Date.parse === 0, the server's '1970-01-01T00:00:00.000Z' comparator floor), and otherwise delegates to the existing `relativeAge`. Only the age-slot render site changed. `relativeAge` itself is deliberately untouched because the Gazetteer imports it and already renders '—' for repos with no last-commit iso — narrowing the shared function would have been out of scope and could shift Fig. 5 behavior. Server code, the comparator, and all other row markup are unchanged. TDD: wrote the failing test first in src/views/Overview.test.tsx (it printed '20666d' against the fixture's generatedAt), then made it pass; the test mounts Overview with an extra attention entry for `meridian` carrying the epoch fallback and asserts the age slot is exactly '—', does not match /\\d+d/, that the reason badge and name still render, and that a real row (ember-ledger) still ages to '1d'. No existing assertions were modified. node_modules was symlinked from the main repo (untracked, not committed). `npx tsc --noEmit` is unavailable — typescript is not an installed dependency and I did not install it.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-014.8uK3Gb\n\n\n Test Files  10 passed (10)\n      Tests  205 passed (205)\n   Start at  19:51:06\n   Duration  4.87s (transform 1.41s, setup 0ms, import 2.62s, tests 12.43s, environment 7.27s)"
+      },
+      {
+        "itemId": "T-011",
+        "status": "done",
+        "branch": "wave-668551-T-011",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-011.n1AEVe",
+        "files_changed": [
+          "README.md"
+        ],
+        "summary": "Wrote README.md in the survey-folio voice (measured, nautical-cartographic, no marketing fluff). Verified every claim against the actual code before writing: shared/contract.js (attention priority order, isStale/STALE_DAYS=90 strict inequality, dayKey local-TZ bucketing, upstream three-state contract, CSS render vocabulary), server/index.js (createServer, cache-first /api/atlas, single-flight rescan, SSE scan-events, DEFAULT_PORT=4600), server/scan.js and server/loc.js (discoverRepos walk-time pruning of node_modules/dist/build/.git/vendor/.next/target/coverage, per-file and per-repo caps, extension->language table), server/gitFacts.js (execFile argv-array git plumbing, never-throws design, ahead/behind parse order), server/attention.js (dirty>unpushed>stale priority, no-remote never unpushed, zero-commit epoch fallback), src/App.tsx (hash routing, cross-filter day state, masthead/theme toggle), src/views/Overview.tsx (Fig.1-5 plate order and captions), src/views/RepoDetail.tsx (Fig.6-10 drill-down), src/hooks/useKeyboardNav.ts (j/k/Enter, ignores editable targets), src/hooks/useTheme.ts (data-theme attribute + localStorage + system-preference fallback), src/components/CommandPalette.tsx (Cmd+K wiring), package.json scripts (start = vite build && node server/index.js, test = vitest run), vite.config.ts (TZ pinned to America/Chicago), and .gitignore (.atlas-cache.json is the on-disk cache, confirming no DB claim). Covers: what Repo Atlas is, npm start/test, first-scan timing (~60-90s), the plain-Node+frozen-contract+Vite/React architecture, every implemented feature (attention queue, heatmap+timeline cross-filter, Gazetteer search/sort, drill-down Fig.6-10, Cmd+K palette, j/k nav, themes, live rescan via SSE), and the read-only/local-git-only/no-DB/no-auth boundaries. No test location was in my file scope (README.md only), so no new test file was created — instead I ran the full existing suite via a temporary node_modules symlink to the main repo (removed after) to confirm the codebase I documented is actually green.",
+        "self_test_output": "> repo-atlas@0.1.0 test\n> vitest run\n\n RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-011.n1AEVe\n\n Test Files  10 passed (10)\n      Tests  204 passed (204)\n   Start at  19:51:54\n   Duration  4.23s (transform 920ms, setup 0ms, import 2.06s, tests 11.28s, environment 7.37s)"
+      }
+    ],
+    "dead_items": [],
+    "timestamp": "1786668551"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder-F-014",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "afbbc86875e04e8be",
+      "model": "claude-opus-5[1m]",
+      "state": "done",
+      "startedAt": 1786668580314,
+      "queuedAt": 1786668578757,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "F-014",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-F-014.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786668689221,
+      "tokens": 47629,
+      "toolCalls": 16,
+      "durationMs": 108907,
+      "resultPreview": "{\"itemId\":\"F-014\",\"status\":\"done\",\"branch\":\"wave-668551-F-014\",\"worktree\":\"/private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-F-014.8uK3Gb\",\"files_changed\":[\"src/components/AttentionQueue.tsx\",\"src/views/Overview.test.tsx\"],\"summary\":\"Added a local `ageLabel(iso, nowIso)` helper in src/components/AttentionQueue.tsx that returns the Gazetteer's no-commit marker '—' when the activity inst…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "builder-T-011",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a522a3b8da25008aa",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786668581013,
+      "queuedAt": 1786668578757,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "T-011",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-T-011.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786668745440,
+      "tokens": 77116,
+      "toolCalls": 22,
+      "durationMs": 164427,
+      "resultPreview": "{\"itemId\":\"T-011\",\"status\":\"done\",\"branch\":\"wave-668551-T-011\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-T-011.n1AEVe\",\"files_changed\":[\"README.md\"],\"summary\":\"Wrote README.md in the survey-folio voice (measured, nautical-cartographic, no marketing fluff). Verified every claim against the actual code before writing: shared/contract.js (attention priority order, isStale/STAL…"
+    }
+  ],
+  "totalTokens": 124745,
+  "totalToolCalls": 38
+}
