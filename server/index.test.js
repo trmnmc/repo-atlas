@@ -6,12 +6,17 @@
  * awaits, built on the frozen fixtureSnapshot) and talks to a real
  * server.listen(0) over raw fetch / node:http — no supertest dependency.
  * Covers the full T-005 acceptance surface: cache-first /api/atlas,
- * async single-flight /api/rescan, ordered SSE /api/scan-events ending in
- * 'done' after which /api/atlas is fresh with no restart, /api/repo/:id
- * drill-down + 404, and dist/ static serving incl. a traversal attempt.
+ * async single-flight /api/rescan, ordered persistent SSE /api/scan-events
+ * whose terminal 'done' guarantees /api/atlas is fresh with no restart,
+ * /api/repo/:id drill-down + 404, and dist/ static serving incl. a
+ * traversal attempt. R-015 additions: the SSE stream is PERSISTENT (the
+ * server never ends a live stream — a server-closed 200 stream makes
+ * EventSource auto-reconnect and loop), one scan delivers exactly one
+ * terminal 'done', an idle-period subscriber gets no stale replay, and a
+ * late cache seed can never overwrite a fresher scan result.
  */
 
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -19,6 +24,33 @@ import http from 'node:http';
 import { createServer } from './index.js';
 import { fixtureSnapshot } from '../shared/fixtures.js';
 import { isScanEvent } from '../shared/contract.js';
+
+/* ------------------------------------------------------------------ */
+/* cache.js passthrough mock (delay hook for the seed-race test)       */
+/* ------------------------------------------------------------------ */
+
+// Default is a zero-delay passthrough to the REAL implementations, so all
+// pre-existing tests exercise the genuine cache code. The seed-race test
+// dials loadCacheDelayMs up to reproduce the racy interleaving: the READ
+// happens immediately (capturing the stale on-disk bytes before the scan's
+// saveCache can overwrite them), but the promise RESOLVES only after the
+// delay — i.e. after a fast first scan has already landed its fresh
+// snapshot. Delaying before the read would miss the race entirely: the
+// late read would just pick up the fresh cache saveCache wrote.
+const cacheHooks = vi.hoisted(() => ({ loadCacheDelayMs: 0 }));
+vi.mock('./cache.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    loadCache: async (...args) => {
+      const result = await actual.loadCache(...args);
+      if (cacheHooks.loadCacheDelayMs > 0) {
+        await new Promise((r) => setTimeout(r, cacheHooks.loadCacheDelayMs));
+      }
+      return result;
+    },
+  };
+});
 
 /* ------------------------------------------------------------------ */
 /* Fixture plumbing                                                    */
@@ -130,27 +162,95 @@ function rawGet(baseUrl, rawPath) {
   });
 }
 
-/** Reads an SSE fetch response to completion, returning parsed data events in order. */
-async function collectSseEvents(url) {
-  const res = await fetch(url);
+/** @param {string} raw SSE frame text @returns {object[]} parsed data events in order */
+function parseSseFrames(raw) {
+  const events = [];
+  for (const chunk of raw.split('\n\n')) {
+    const line = chunk.split('\n').find((l) => l.startsWith('data: '));
+    if (line) events.push(JSON.parse(line.slice('data: '.length)));
+  }
+  return events;
+}
+
+/**
+ * Subscribes to the (persistent) SSE stream and reads until the terminal
+ * 'done' event arrives, then disconnects CLIENT-side — the server keeps
+ * the stream open, so reading "to completion" would hang forever. Also
+ * the canonical way tests drain a background scan: 'done' is only sent
+ * once the snapshot has landed in memory AND on disk (see server/index.js),
+ * so afterEach can safely tear the fixture directory down afterwards.
+ * Throws if no 'done' arrives within timeoutMs.
+ */
+async function collectSseUntilDone(url, { timeoutMs = 5000 } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const res = await fetch(url, { signal: controller.signal });
   expect(res.headers.get('content-type')).toMatch(/text\/event-stream/);
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
   const events = [];
-  for (;;) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let idx;
-    while ((idx = buffer.indexOf('\n\n')) !== -1) {
-      const chunk = buffer.slice(0, idx);
-      buffer = buffer.slice(idx + 2);
-      const line = chunk.split('\n').find((l) => l.startsWith('data: '));
-      if (line) events.push(JSON.parse(line.slice('data: '.length)));
+  try {
+    outer: for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break; // server closed — tolerated here, asserted elsewhere
+      buffer += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buffer.indexOf('\n\n')) !== -1) {
+        const chunk = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+        const line = chunk.split('\n').find((l) => l.startsWith('data: '));
+        if (line) {
+          const event = JSON.parse(line.slice('data: '.length));
+          events.push(event);
+          if (event.phase === 'done') break outer;
+        }
+      }
     }
+  } catch (err) {
+    if (controller.signal.aborted) {
+      throw new Error(`no terminal 'done' within ${timeoutMs}ms (got ${events.length} events)`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+    controller.abort();
   }
   return events;
+}
+
+/**
+ * Raw node:http SSE client that HOLDS the connection open for windowMs
+ * (like a browser EventSource would), then reports everything observed:
+ * parsed events in order plus whether the SERVER ended the stream. This is
+ * the probe for the persistent-SSE contract — a server-closed 200 stream
+ * makes EventSource auto-reconnect and replay-loop.
+ * @returns {Promise<{ events: object[], serverEnded: boolean }>}
+ */
+function holdSse(baseUrl, windowMs) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(baseUrl);
+    const req = http.request(
+      { hostname: u.hostname, port: u.port, path: '/api/scan-events', method: 'GET' },
+      (res) => {
+        let raw = '';
+        let serverEnded = false;
+        res.setEncoding('utf8');
+        res.on('data', (c) => {
+          raw += c;
+        });
+        res.on('end', () => {
+          serverEnded = true;
+        });
+        setTimeout(() => {
+          resolve({ events: parseSseFrames(raw), serverEnded });
+          req.destroy();
+        }, windowMs);
+      },
+    );
+    req.on('error', reject);
+    req.end();
+  });
 }
 
 /** @type {Array<() => Promise<void>>} */
@@ -158,6 +258,7 @@ let cleanups = [];
 afterEach(async () => {
   await Promise.all(cleanups.map((fn) => fn()));
   cleanups = [];
+  cacheHooks.loadCacheDelayMs = 0;
 });
 
 /* ------------------------------------------------------------------ */
@@ -182,6 +283,30 @@ describe('GET /api/atlas', () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(fixtureSnapshot);
     expect(t.scanFn.callCount()).toBe(0);
+  });
+
+  it('never lets a slow cache seed overwrite a fresher scan result (sequenced writers)', async () => {
+    const STALE_NOW = '2020-01-01T00:00:00.000Z';
+    // Slow cache seed: the stale bytes are read at boot but the promise
+    // resolves only ~150ms later...
+    cacheHooks.loadCacheDelayMs = 150;
+    // ...while the scan completes in ~7ms.
+    const scanFn = makeFixtureScanFn({ delayMs: 1 });
+    const t = await startTestServer({
+      scanFn,
+      initialCache: { ...fixtureSnapshot, generatedAt: STALE_NOW },
+    });
+    cleanups.push(t.close);
+
+    await fetch(`${t.baseUrl}/api/rescan`, { method: 'POST' });
+    const events = await collectSseUntilDone(`${t.baseUrl}/api/scan-events`);
+    expect(events.at(-1).phase).toBe('done');
+
+    // Let the delayed loadCache resolve AFTER the scan has landed.
+    await sleep(250);
+
+    const snapshot = await (await fetch(`${t.baseUrl}/api/atlas`)).json();
+    expect(snapshot.generatedAt).toBe(FIXED_NOW); // not STALE_NOW
   });
 });
 
@@ -208,7 +333,7 @@ describe('POST /api/rescan', () => {
     // Drain the still-running background scan to completion before the
     // test ends, so afterEach doesn't tear down the fixture directory out
     // from under an in-flight saveCache() write.
-    await collectSseEvents(`${t.baseUrl}/api/scan-events`);
+    await collectSseUntilDone(`${t.baseUrl}/api/scan-events`);
   });
 
   it('single-flights: a second POST while scanning reports back without starting a second scan', async () => {
@@ -227,9 +352,9 @@ describe('POST /api/rescan', () => {
 
     // Drain to completion (rather than polling /api/atlas) so this test
     // never races saveCache()'s write against afterEach's directory
-    // cleanup: the SSE stream is only guaranteed to close once the scan
-    // has fully landed, in memory and on disk (see server/index.js).
-    const events = await collectSseEvents(`${t.baseUrl}/api/scan-events`);
+    // cleanup: the terminal 'done' is only sent once the scan has fully
+    // landed, in memory and on disk (see server/index.js).
+    const events = await collectSseUntilDone(`${t.baseUrl}/api/scan-events`);
     expect(events.at(-1).phase).toBe('done');
     expect(scanFn.callCount()).toBe(1);
   });
@@ -248,7 +373,7 @@ describe('GET /api/scan-events', () => {
     const rescanRes = await fetch(`${t.baseUrl}/api/rescan`, { method: 'POST' });
     expect(rescanRes.status).toBe(202);
 
-    const events = await collectSseEvents(`${t.baseUrl}/api/scan-events`);
+    const events = await collectSseUntilDone(`${t.baseUrl}/api/scan-events`);
 
     expect(events.length).toBeGreaterThan(0);
     for (const event of events) expect(isScanEvent(event)).toBe(true);
@@ -284,19 +409,64 @@ describe('GET /api/scan-events', () => {
     // Let a couple of progress events land before subscribing.
     await sleep(25);
 
-    const events = await collectSseEvents(`${t.baseUrl}/api/scan-events`);
+    const events = await collectSseUntilDone(`${t.baseUrl}/api/scan-events`);
     expect(events[0].phase).toBe('start');
     expect(events.at(-1).phase).toBe('done');
     expect(events.slice(1, -1).every((e) => e.phase === 'repo')).toBe(true);
     for (const event of events) expect(isScanEvent(event)).toBe(true);
   });
 
-  it('emits nothing and closes cleanly when no scan has ever run', async () => {
+  it('emits nothing and stays open when no scan has ever run', async () => {
     const t = await startTestServer();
     cleanups.push(t.close);
 
-    const events = await collectSseEvents(`${t.baseUrl}/api/scan-events`);
+    // R-015: previously this asserted the server closed the stream — that
+    // very close is what made EventSource auto-reconnect forever. The
+    // contract is now: nothing to say, but the stream stays open.
+    const { events, serverEnded } = await holdSse(t.baseUrl, 200);
     expect(events).toEqual([]);
+    expect(serverEnded).toBe(false);
+  });
+
+  it('delivers exactly one terminal done to a persistent subscriber held across a scan', async () => {
+    const scanFn = makeFixtureScanFn({ delayMs: 10 });
+    const t = await startTestServer({ scanFn });
+    cleanups.push(t.close);
+
+    // Subscribe FIRST and hold the connection like a browser EventSource;
+    // the fixture scan takes ~(1 + 6) * 10ms = 70ms, so a 900ms window
+    // leaves a long idle stretch after 'done' in which the old
+    // end-after-done behavior (server-closed stream -> auto-reconnect ->
+    // full stale replay) produced extra terminal 'done' events.
+    const held = holdSse(t.baseUrl, 900);
+    await sleep(20); // subscription established (headers flush immediately)
+    const res = await fetch(`${t.baseUrl}/api/rescan`, { method: 'POST' });
+    expect(res.status).toBe(202);
+
+    const { events, serverEnded } = await held;
+    expect(events.filter((e) => e.phase === 'done')).toHaveLength(1);
+    expect(events.at(-1).phase).toBe('done');
+    for (const event of events) expect(isScanEvent(event)).toBe(true);
+    // The server must NOT have ended the live stream after 'done'.
+    expect(serverEnded).toBe(false);
+  });
+
+  it('replays no stale terminal done to a subscriber joining after the scan completed', async () => {
+    const scanFn = makeFixtureScanFn({ delayMs: 10 });
+    const t = await startTestServer({ scanFn });
+    cleanups.push(t.close);
+
+    await fetch(`${t.baseUrl}/api/rescan`, { method: 'POST' });
+    // Run the scan fully to completion (snapshot swapped + cache saved).
+    const liveEvents = await collectSseUntilDone(`${t.baseUrl}/api/scan-events`);
+    expect(liveEvents.at(-1).phase).toBe('done');
+
+    // A fresh subscriber during the idle period must get NOTHING — the
+    // finished scan's retained events (ending in the terminal 'done')
+    // must never be replayed — and the stream must stay open.
+    const { events, serverEnded } = await holdSse(t.baseUrl, 300);
+    expect(events).toEqual([]);
+    expect(serverEnded).toBe(false);
   });
 });
 

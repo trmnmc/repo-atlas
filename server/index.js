@@ -9,12 +9,18 @@
  * `latest` snapshot (seeded from cacheFile on boot) — it never blocks on a
  * scan. POST /api/rescan kicks scanFn asynchronously (single-flight: a scan
  * already running just reports back {scanning:true}, no second scan) and
- * returns 202 immediately. GET /api/scan-events is a small SSE hub: it
- * replays whatever it knows about the most recent scan to a fresh
- * subscriber, then streams live events, and ends the stream at the
- * terminal 'done' event. When a scan lands, the fresh Snapshot both
- * replaces `latest` in memory (no restart needed) and is persisted via
- * saveCache.
+ * returns 202 immediately. GET /api/scan-events is a small SSE hub: a
+ * subscriber joining mid-scan gets the in-flight scan's events replayed
+ * in order, then live events. The connection is PERSISTENT — the server
+ * never ends a live SSE stream itself (an EventSource treats a
+ * server-closed 200 stream as an error and auto-reconnects ~3s later,
+ * which turned one finished scan into an infinite replay/refetch loop).
+ * The stream ends only when the client disconnects or the server shuts
+ * down. Retained events are cleared once a scan finishes (after the
+ * snapshot swap + saveCache), so a subscriber joining between scans gets
+ * nothing — never a stale terminal 'done'. When a scan lands, the fresh
+ * Snapshot both replaces `latest` in memory (no restart needed) and is
+ * persisted via saveCache.
  */
 
 import http from 'node:http';
@@ -61,7 +67,18 @@ const MIME_TYPES = {
 };
 const DEFAULT_MIME = 'application/octet-stream';
 
-/** @returns {Snapshot} the shape /api/atlas answers with before anything has ever loaded. */
+/**
+ * The shape /api/atlas answers with before anything has ever loaded.
+ *
+ * `generatedAt: null` is the DELIBERATE pre-first-scan sentinel, not a
+ * contract violation to "fix": the contract types generatedAt as a string
+ * for real snapshots, and the UI (src/App.tsx + useAtlas) explicitly
+ * branches on null to render its no-snapshot-yet state. Changing null to
+ * a string here would silently break that handling — keep the two in sync.
+ *
+ * @returns {Snapshot} contract-shaped empty snapshot (repos/attention are
+ *   valid empty arrays; generatedAt is the null sentinel described above).
+ */
 function emptySnapshot() {
   return { generatedAt: null, repos: [], attention: [] };
 }
@@ -100,6 +117,7 @@ export function createServer({
   /**
    * @type {{
    *   latest: Snapshot | null,
+   *   scanLanded: boolean,
    *   scanning: boolean,
    *   events: ScanEvent[],
    *   sseClients: Set<import('node:http').ServerResponse>,
@@ -107,6 +125,11 @@ export function createServer({
    */
   const state = {
     latest: null,
+    // True once any scan result has been swapped into `latest`. Sequences
+    // the two writers of `latest`: the async cache seed below must never
+    // clobber a fresher scan result that landed while the disk read was
+    // still in flight.
+    scanLanded: false,
     scanning: false,
     events: [],
     sseClients: new Set(),
@@ -117,7 +140,10 @@ export function createServer({
   // since an already-settled promise resolves on the next microtask).
   const cacheReady = loadCache(cacheFile)
     .then((cached) => {
-      if (cached) state.latest = cached;
+      // Sequenced write: apply the seed only if no scan result has landed
+      // yet — a slow loadCache resolving after a fast first scan must not
+      // overwrite the fresher snapshot (or the cache file it just wrote).
+      if (cached && !state.scanLanded) state.latest = cached;
     })
     .catch(() => {
       // loadCache never throws per its own contract, but stay defensive.
@@ -128,14 +154,15 @@ export function createServer({
     return state.latest ?? emptySnapshot();
   }
 
-  /** @param {ScanEvent} event */
+  /**
+   * Push a live event to every connected subscriber (and retain it for
+   * replay to subscribers joining later in the SAME scan). Never ends the
+   * connections — SSE streams are persistent; see handleScanEvents.
+   * @param {ScanEvent} event
+   */
   function broadcast(event) {
     state.events.push(event);
     for (const res of state.sseClients) writeSseEvent(res, event);
-    if (event.phase === 'done') {
-      for (const res of state.sseClients) res.end();
-      state.sseClients.clear();
-    }
   }
 
   /**
@@ -168,19 +195,23 @@ export function createServer({
           nowIso: nowFn(),
         });
         state.latest = snapshot;
+        state.scanLanded = true;
         await saveCache(cacheFile, snapshot);
       } catch (err) {
         // A failed scan leaves the last-known-good snapshot in place;
         // it must never take the server down or wedge single-flight.
         console.error('[repo-atlas] scan failed:', err);
       } finally {
-        if (pendingDone) {
-          broadcast(pendingDone);
-        } else {
-          // Errored before completion: don't leave subscribers hanging.
-          for (const res of state.sseClients) res.end();
-          state.sseClients.clear();
-        }
+        // Deferred terminal event: only sent once the snapshot swap and
+        // saveCache above have completed (errored scans send no 'done').
+        if (pendingDone) broadcast(pendingDone);
+        // Replay exists only DURING a live scan, for subscribers joining
+        // mid-scan. Once the scan is over (done or errored), drop the
+        // retained events so a later subscriber can never receive a
+        // stale replay ending in a terminal 'done' from a finished scan.
+        // Connections stay OPEN — closing them would trigger EventSource
+        // auto-reconnect loops in the browser.
+        state.events = [];
         state.scanning = false;
       }
     })();
@@ -202,6 +233,18 @@ export function createServer({
   }
 
   /**
+   * Persistent SSE subscription. The server NEVER ends this stream itself:
+   * per the EventSource spec a server-closed 200 stream is an error the
+   * client retries (~3s), and the SPA holds one subscription for its whole
+   * lifetime — ending the stream here after a scan turned into an infinite
+   * reconnect -> stale replay -> refetch loop. The stream lives until the
+   * client disconnects (req 'close') or the server shuts down.
+   *
+   * A subscriber joining mid-scan gets the in-flight scan's events
+   * replayed in order, then live events. A subscriber joining while idle
+   * gets nothing until the next scan starts (state.events is cleared at
+   * scan completion) — never a replayed terminal 'done'.
+   *
    * @param {import('node:http').IncomingMessage} req
    * @param {import('node:http').ServerResponse} res
    */
@@ -213,17 +256,11 @@ export function createServer({
     });
     if (typeof res.flushHeaders === 'function') res.flushHeaders();
 
-    // Replay everything known about the most recent (or in-flight) scan.
+    // Replay the in-flight scan's progress so far (empty while idle).
     for (const event of state.events) writeSseEvent(res, event);
 
-    if (state.scanning) {
-      // Live events still to come: keep this connection open.
-      state.sseClients.add(res);
-      req.on('close', () => state.sseClients.delete(res));
-    } else {
-      // Nothing more will arrive until the next rescan; close cleanly.
-      res.end();
-    }
+    state.sseClients.add(res);
+    req.on('close', () => state.sseClients.delete(res));
   }
 
   /**
