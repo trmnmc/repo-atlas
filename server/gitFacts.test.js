@@ -99,6 +99,10 @@ const L1_ISO = '2026-07-05T10:00:00-05:00';
 /** @type {string} */ let wtBaseDir;
 /** @type {string} */ let worktreeDir;
 /** @type {string} */ let nonRepoDir;
+/** @type {string} */ let stagedOnlyDir;
+/** @type {string} */ let modifiedOnlyDir;
+/** @type {string} */ let stagedModDir;
+/** @type {string} */ let capDir;
 
 beforeAll(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'gitfacts-fixtures-'));
@@ -195,6 +199,44 @@ beforeAll(() => {
   nonRepoDir = path.join(root, 'not-a-repo');
   fs.mkdirSync(nonRepoDir);
   write(nonRepoDir, 'readme.txt', 'nothing here\n');
+
+  // -- workingTree fixtures ------------------------------------------------
+  // staged-only: a new file added to the index, nothing else touched.
+  stagedOnlyDir = path.join(root, 'staged-only');
+  fs.mkdirSync(stagedOnlyDir);
+  git(stagedOnlyDir, ['init', '-q', '-b', 'main']);
+  write(stagedOnlyDir, 'base.txt', 'base\n');
+  commitAll(stagedOnlyDir, 'base', C1_ISO);
+  write(stagedOnlyDir, 'fresh.txt', 'staged\n');
+  git(stagedOnlyDir, ['add', 'fresh.txt']);
+
+  // modified-only: a tracked file edited but NOT staged.
+  modifiedOnlyDir = path.join(root, 'modified-only');
+  fs.mkdirSync(modifiedOnlyDir);
+  git(modifiedOnlyDir, ['init', '-q', '-b', 'main']);
+  write(modifiedOnlyDir, 'notes.txt', 'v1\n');
+  commitAll(modifiedOnlyDir, 'v1', C1_ISO);
+  write(modifiedOnlyDir, 'notes.txt', 'v2 unstaged\n');
+
+  // staged+modified: the SAME file staged, then edited again (XY = MM).
+  stagedModDir = path.join(root, 'staged-and-modified');
+  fs.mkdirSync(stagedModDir);
+  git(stagedModDir, ['init', '-q', '-b', 'main']);
+  write(stagedModDir, 'both.txt', 'v1\n');
+  commitAll(stagedModDir, 'v1', C1_ISO);
+  write(stagedModDir, 'both.txt', 'v2 staged\n');
+  git(stagedModDir, ['add', 'both.txt']);
+  write(stagedModDir, 'both.txt', 'v3 unstaged on top\n');
+
+  // cap: 55 untracked files -> list capped at 50 with truncated=true.
+  capDir = path.join(root, 'cap');
+  fs.mkdirSync(capDir);
+  git(capDir, ['init', '-q', '-b', 'main']);
+  write(capDir, 'seed.txt', 'seed\n');
+  commitAll(capDir, 'seed', C1_ISO);
+  for (let i = 0; i < 55; i += 1) {
+    write(capDir, `u${String(i).padStart(2, '0')}.txt`, `${i}\n`);
+  }
 });
 
 afterAll(() => {
@@ -238,6 +280,86 @@ describe('dirty (porcelain non-empty)', () => {
   it('an untracked file makes the repo dirty', async () => {
     const facts = await gitFacts(dirtyDir);
     expect(facts.dirty).toBe(true);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* workingTree — WHAT is dirty (additive runtime field)                */
+/* ------------------------------------------------------------------ */
+
+describe('workingTree', () => {
+  it('a clean repo carries empty lists and truncated=false', async () => {
+    const facts = await gitFacts(basicDir);
+    expect(facts.workingTree).toEqual({
+      staged: [],
+      modified: [],
+      untracked: [],
+      truncated: false,
+    });
+  });
+
+  it('an untracked-only repo lists exactly the porcelain ?? paths', async () => {
+    const facts = await gitFacts(dirtyDir);
+    expect(facts.workingTree).toEqual({
+      staged: [],
+      modified: [],
+      untracked: ['scratch.txt'],
+      truncated: false,
+    });
+  });
+
+  it('a staged-only repo lists the file under staged alone', async () => {
+    const facts = await gitFacts(stagedOnlyDir);
+    expect(facts.workingTree).toEqual({
+      staged: ['fresh.txt'],
+      modified: [],
+      untracked: [],
+      truncated: false,
+    });
+  });
+
+  it('a modified-only repo lists the file under modified alone', async () => {
+    const facts = await gitFacts(modifiedOnlyDir);
+    expect(facts.workingTree).toEqual({
+      staged: [],
+      modified: ['notes.txt'],
+      untracked: [],
+      truncated: false,
+    });
+  });
+
+  it('a file staged then edited again (XY=MM) appears in BOTH staged and modified', async () => {
+    // Precondition: the fixture really is the MM porcelain state.
+    const porcelain = git(stagedModDir, ['status', '--porcelain']);
+    expect(porcelain).toBe('MM both.txt\n');
+    const facts = await gitFacts(stagedModDir);
+    expect(facts.workingTree).toEqual({
+      staged: ['both.txt'],
+      modified: ['both.txt'],
+      untracked: [],
+      truncated: false,
+    });
+  });
+
+  it('caps each list at 50 in porcelain order and flags truncated', async () => {
+    // Expected order comes straight from git itself: match porcelain exactly.
+    const porcelainUntracked = git(capDir, ['status', '--porcelain'])
+      .split('\n')
+      .filter((line) => line.startsWith('?? '))
+      .map((line) => line.slice(3));
+    expect(porcelainUntracked).toHaveLength(55);
+    const facts = await gitFacts(capDir);
+    expect(facts.workingTree.untracked).toHaveLength(50);
+    expect(facts.workingTree.untracked).toEqual(porcelainUntracked.slice(0, 50));
+    expect(facts.workingTree.truncated).toBe(true);
+    expect(facts.workingTree.staged).toEqual([]);
+    expect(facts.workingTree.modified).toEqual([]);
+  });
+
+  it('hostile fixtures (empty repo, non-repo) degrade to empty lists', async () => {
+    const empty = { staged: [], modified: [], untracked: [], truncated: false };
+    expect((await gitFacts(emptyDir)).workingTree).toEqual(empty);
+    expect((await gitFacts(nonRepoDir)).workingTree).toEqual(empty);
   });
 });
 
