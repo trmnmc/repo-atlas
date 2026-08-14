@@ -370,10 +370,10 @@
       "acceptance": "One completed scan delivers exactly one terminal done to a persistent EventSource client over 15s (no reconnect replay loop), /api/atlas before any scan returns a contract-valid snapshot, and a late cache seed can never overwrite a fresher scan result",
       "packages": [],
       "route_class": "core",
-      "status": "todo",
+      "status": "done",
       "model": "fable",
-      "attempts": 0,
-      "notes": "review-fix cycle 10 findings 1/5/6/7, all REPRODUCED with evidence; fixer was blocked by a wrong (SWARM) worktree assignment — tool bug journaled"
+      "attempts": 1,
+      "notes": "verified cycle 11: conductor persistent-SSE probe — exactly 1 terminal done in 20s window (41 events), suite 208 green"
     }
   ]
 }

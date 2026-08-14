@@ -1,0 +1,55 @@
+{
+  "summary": "Parallel feature builders in isolated worktrees; returns claims for conductor verification",
+  "agentCount": 1,
+  "logs": [
+    "wave @ 1786670349 [R-015 \"Server SSE + snapshot lifecycle fixes: no res.end() on live SSE, no stale-done replay, contract-valid empty snapshot, sequenced cache-seed\" (fable/high)]"
+  ],
+  "result": {
+    "wave": [
+      {
+        "itemId": "R-015",
+        "status": "done",
+        "branch": "wave-670349-R-015",
+        "worktree": "/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-R-015.0vyK43",
+        "files_changed": [
+          "server/index.js",
+          "server/index.test.js"
+        ],
+        "summary": "All four reproduced findings fixed in server/index.js, committed as 0b5d238 on wave-670349-R-015. (1) /api/scan-events is now a persistent SSE stream: the server never ends a live stream (that close was what drove EventSource's ~3s auto-reconnect replay loop); streams end only on client disconnect (req 'close') or server shutdown. (2) Retained scan events are cleared in the scan's finally, after snapshot swap + saveCache and after the deferred terminal 'done' broadcast — replay exists only during a live scan, so an idle-period subscriber gets nothing, never a stale 'done'. (3) DECISION STATED EXPLICITLY per conductor instructions: emptySnapshot() KEEPS generatedAt: null as the deliberate pre-first-scan sentinel, now documented with a comment cross-referencing the UI's explicit null handling (src/App.tsx / useAtlas); no UI files were touched. (4) state.latest writers are sequenced via a new state.scanLanded flag — the async cache seed applies only if no scan result has landed. Tests: 3 new tests added (persistent subscriber held over a raw http connection across a scan receives exactly one terminal done and the stream stays open; a subscriber joining after completion receives zero events with the stream open; a slow cache seed — stale bytes read at boot but resolving after a fast scan lands — cannot overwrite the fresher snapshot; the mock deliberately reads-early/resolves-late because delaying the read itself would just re-read the freshly saved cache and miss the race, which I caught when the first version of the test wrongly passed against the pre-fix server). All 4 new/changed behaviors were verified to FAIL against the pre-fix server/index.js and pass with the fix. The 13 pre-existing server tests are preserved with their assertions intact except mechanically adapting the SSE drain helper (streams no longer server-close, so tests read until 'done' then disconnect client-side) and the 'no scan has ever run' test, whose 'closes cleanly' assertion enshrined the reproduced bug — it now asserts emits-nothing-and-stays-open, which is strictly the mandated new contract, not a weakening. Full suite: 208 tests green (server suite 16/16, run twice for stability). Preserved contracts re-verified by the suite: cache-first /api/atlas never-500, single-flight rescan, 404 unknown repo, traversal safety, mime types, SPA fallback.",
+        "self_test_output": " RUN  v4.1.10 /private/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-R-015.0vyK43\n\n\n Test Files  10 passed (10)\n      Tests  208 passed (208)\n   Start at  20:29:19\n   Duration  3.62s (transform 1.09s, setup 0ms, import 2.19s, tests 11.49s, environment 5.32s)"
+      }
+    ],
+    "dead_items": [],
+    "timestamp": "1786670349"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Build"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "builder-R-015",
+      "phaseIndex": 1,
+      "phaseTitle": "Build",
+      "agentId": "a2b27bddedca4133c",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786670375549,
+      "queuedAt": 1786670373633,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "R-015",
+      "promptPreview": "You are a feature builder in an overnight autonomous swarm. Your FIRST\naction is to provision your own private worktree OF THE TARGET REPO —\ndo not trust whatever directory you wake up in (KI-1 2026-08-09: a\nharness-provided worktree can derive from the WRONG repo):\n\n## Step 0 — provision + assert (before touching anything)\n1. WT=$(mktemp -d \"${TMPDIR:-/tmp}/wave-R-015.XXXXXX\")\n2. git -C \"/Users/t…",
+      "lastProgressAt": 1786670999723,
+      "tokens": 82314,
+      "toolCalls": 38,
+      "durationMs": 624173,
+      "resultPreview": "{\"itemId\":\"R-015\",\"status\":\"done\",\"branch\":\"wave-670349-R-015\",\"worktree\":\"/var/folders/2k/kb97v5mx3vgc6htpvrx881bw0000gn/T/wave-R-015.0vyK43\",\"files_changed\":[\"server/index.js\",\"server/index.test.js\"],\"summary\":\"All four reproduced findings fixed in server/index.js, committed as 0b5d238 on wave-670349-R-015. (1) /api/scan-events is now a persistent SSE stream: the server never ends a live stream …"
+    }
+  ],
+  "totalTokens": 82314,
+  "totalToolCalls": 38
+}
