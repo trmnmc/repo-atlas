@@ -3,10 +3,15 @@
  *
  * Bare SVG, props-in only (no fetching, no Plate wrapper — the view owns
  * the Plate). Weeks are columns (Sunday..Saturday top-to-bottom), the last
- * column is the week containing `endDayKey`. Every one of the 53 x 7 = 371
- * calendar days in the window renders a cell — including days that fall
- * after `endDayKey` within its week — so the grid is always a full
- * rectangle and cell counts are exact and hand-computable.
+ * column is the week containing `endDayKey`. The window itself is always a
+ * full 53 x 7 = 371-day rectangle (independent of `commitDays`, so an empty
+ * activity map still derives a sane, correctly-spaced window and month-label
+ * row) — but days strictly after `endDayKey` are the future relative to the
+ * snapshot and are never observed, so they render no cell at all rather than
+ * a fabricated "0 commits" reading. This only applies when `endDayKey` is a
+ * valid dayKey; with no known snapshot day (missing/invalid `endDayKey`) the
+ * grid falls back to a deterministic anchor and renders the full rectangle,
+ * since there's no real "future" to exclude.
  *
  * Clicking (or Enter/Space-activating) a cell emits its contract `dayKey`
  * via `onDayClick` — the cross-filter steal that the Timeline chart reads.
@@ -58,13 +63,16 @@ function isValidDayKey(key: unknown): key is string {
 
 export function Heatmap({ commitDays, endDayKey, onDayClick }: HeatmapProps) {
   const days = commitDays ?? {};
+  const hasKnownEnd = isValidDayKey(endDayKey);
   // Deterministic fallback (never wall-clock) so empty/invalid props never throw.
-  const endDate = isValidDayKey(endDayKey) ? parseDayKey(endDayKey) : new Date(1970, 0, 1);
+  // The window's shape (53 correctly-spaced weeks/months) never depends on
+  // `commitDays` — an empty activity map still walks the same calendar math.
+  const endDate = hasKnownEnd ? parseDayKey(endDayKey) : new Date(1970, 0, 1);
   const endDow = endDate.getDay();
   const lastColStart = addDays(endDate, -endDow);
   const firstColStart = addDays(lastColStart, -(COLS - 1) * 7);
 
-  const columns: { key: string; count: number; level: 0 | 1 | 2 | 3 | 4 }[][] = [];
+  const columns: { key: string; count: number; level: 0 | 1 | 2 | 3 | 4; isFuture: boolean }[][] = [];
   const monthLabels: { col: number; label: string }[] = [];
   let prevMonth = -1;
   for (let col = 0; col < COLS; col++) {
@@ -74,12 +82,15 @@ export function Heatmap({ commitDays, endDayKey, onDayClick }: HeatmapProps) {
       monthLabels.push({ col, label: MONTH_NAMES[month] });
       prevMonth = month;
     }
-    const cells: { key: string; count: number; level: 0 | 1 | 2 | 3 | 4 }[] = [];
+    const cells: { key: string; count: number; level: 0 | 1 | 2 | 3 | 4; isFuture: boolean }[] = [];
     for (let row = 0; row < ROWS; row++) {
       const date = addDays(colStart, row);
       const key = dayKey(date);
-      const count = days[key] ?? 0;
-      cells.push({ key, count, level: levelFor(count) });
+      // Days after the snapshot day haven't been observed yet — only
+      // meaningful when we actually know the snapshot day.
+      const isFuture = hasKnownEnd && key > endDayKey;
+      const count = isFuture ? 0 : days[key] ?? 0;
+      cells.push({ key, count, level: levelFor(count), isFuture });
     }
     columns.push(cells);
   }
@@ -111,27 +122,29 @@ export function Heatmap({ commitDays, endDayKey, onDayClick }: HeatmapProps) {
         {columns.map((col, ci) => (
           <g key={ci} transform={`translate(${ci * STEP}, 0)`}>
             {col.map((cell, ri) => (
-              <rect
-                key={cell.key}
-                className={`${CSS.heatmapCell} ${heatmapLevelClass(cell.level)}`}
-                x={0}
-                y={ri * STEP}
-                width={CELL}
-                height={CELL}
-                rx={1.5}
-                data-daykey={cell.key}
-                data-count={cell.count}
-                role="button"
-                tabIndex={0}
-                aria-label={`${cell.key}: ${cell.count} commit${cell.count === 1 ? '' : 's'}`}
-                onClick={() => onDayClick?.(cell.key)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    onDayClick?.(cell.key);
-                  }
-                }}
-              />
+              cell.isFuture ? null : (
+                <rect
+                  key={cell.key}
+                  className={`${CSS.heatmapCell} ${heatmapLevelClass(cell.level)}`}
+                  x={0}
+                  y={ri * STEP}
+                  width={CELL}
+                  height={CELL}
+                  rx={1.5}
+                  data-daykey={cell.key}
+                  data-count={cell.count}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${cell.key}: ${cell.count} commit${cell.count === 1 ? '' : 's'}`}
+                  onClick={() => onDayClick?.(cell.key)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      onDayClick?.(cell.key);
+                    }
+                  }}
+                />
+              )
             ))}
           </g>
         ))}

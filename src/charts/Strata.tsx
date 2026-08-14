@@ -35,21 +35,19 @@ export function Strata({ loc }: StrataProps) {
   const total = entries.reduce((sum, [, count]) => sum + count, 0);
 
   if (entries.length === 0 || total === 0) {
+    // An empty band (a single featureless rect) reads as broken, not empty
+    // — say so explicitly instead, styled like the neighboring plates'
+    // empty states (Timeline's muted-ink "No commit activity" reading).
     return (
       <svg
         className="chart-strata chart-strata--empty"
         viewBox={`0 0 ${BAR_WIDTH} ${BAR_HEIGHT}`}
         role="img"
-        aria-label="No languages detected"
+        aria-label="No lines surveyed"
       >
-        <rect
-          className={CSS.strataBand}
-          x={0}
-          y={0}
-          width={BAR_WIDTH}
-          height={BAR_HEIGHT}
-          opacity={0.25}
-        />
+        <text className="chart-timeline__empty-label" x={0} y={BAR_HEIGHT / 2 + 4}>
+          No lines surveyed.
+        </text>
       </svg>
     );
   }

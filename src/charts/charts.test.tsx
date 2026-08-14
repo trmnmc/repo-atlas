@@ -172,6 +172,66 @@ describe('Heatmap', () => {
     // clicking still doesn't throw even with no onDayClick supplied.
     expect(() => fireEvent.click(cells[0])).not.toThrow();
   });
+
+  it('an empty-activity window (empty commitDays + explicit endDayKey) still derives a sane, non-overlapping month-label row', () => {
+    // Empty commitDays must not degenerate the window derivation — the
+    // 53-week grid and its month labels are computed purely from
+    // endDayKey, independent of commitDays. Anchor at a January day so the
+    // window's left edge crosses a Dec/Jan year boundary, the exact spot
+    // the look-pass flagged as stacked/overlapping.
+    const { container } = render(<Heatmap commitDays={{}} endDayKey="2026-01-04" />);
+    const labels = Array.from(container.querySelectorAll('.chart-heatmap__month'));
+    expect(labels.length).toBeGreaterThan(1);
+
+    const CELL = 11;
+    const GAP = 3;
+    const STEP = CELL + GAP;
+    const xs = labels.map((node) => Number(node.getAttribute('x')));
+    // Strictly increasing x positions...
+    for (let i = 1; i < xs.length; i++) {
+      expect(xs[i]).toBeGreaterThan(xs[i - 1]);
+      // ...and no two labels closer than one column width (no overlap).
+      expect(xs[i] - xs[i - 1]).toBeGreaterThanOrEqual(STEP);
+    }
+    // The 53-week window is still fully derived (53 columns of the grid
+    // structure) — an empty map doesn't shrink or corrupt it. (2026-01-04
+    // is a Sunday, so its own week contributes only that one observed day;
+    // the rest of that week is future and correctly omitted — see the
+    // dedicated future-day test below.)
+    const columns = container.querySelectorAll('.chart-heatmap__grid > g');
+    expect(columns.length).toBe(53);
+  });
+
+  it('renders no cells after endDayKey — future days are not observed data', () => {
+    // 2026-08-04 is a Tuesday (verified below), so the final column's
+    // Wed/Thu/Fri/Sat (2026-08-05..08) fall after the snapshot day and
+    // must not render as "0 commits" cells.
+    expect(new Date(2026, 7, 4).getDay()).toBe(2); // Tuesday
+    const { container } = render(<Heatmap commitDays={{}} endDayKey="2026-08-04" />);
+
+    const allCells = container.querySelectorAll(`.${CSS.heatmapCell}`);
+    // 4 future days (Wed..Sat) omitted from the otherwise-full 371-cell grid.
+    expect(allCells.length).toBe(371 - 4);
+
+    allCells.forEach((cell) => {
+      const key = cell.getAttribute('data-daykey');
+      expect(key <= '2026-08-04').toBe(true);
+    });
+
+    // No cell for a future dayKey exists at all, so none can carry the
+    // "0 commits" aria pattern for a day beyond the snapshot.
+    ['2026-08-05', '2026-08-06', '2026-08-07', '2026-08-08'].forEach((futureKey) => {
+      expect(container.querySelector(`[data-daykey="${futureKey}"]`)).toBeNull();
+    });
+  });
+
+  it('with no known snapshot day (invalid endDayKey), the fallback window still renders the full rectangle', () => {
+    // No real "future" is knowable without a snapshot day, so the existing
+    // deterministic-fallback behavior (full 371-cell rectangle) is
+    // unchanged — future-day omission only applies to a valid endDayKey.
+    const { container } = render(<Heatmap commitDays={{}} endDayKey="not-a-date" />);
+    expect(container.querySelectorAll(`.${CSS.heatmapCell}`).length).toBe(371);
+  });
 });
 
 /* ------------------------------------------------------------------
@@ -280,6 +340,30 @@ describe('Sparkline', () => {
     const { container: one } = render(<Sparkline series={[7]} />);
     expect(one.querySelector('.chart-sparkline__reading')?.textContent).toBe('7');
   });
+
+  it('anchors the reading clear of a rising line\'s final point (no strike-through)', () => {
+    // Rising series ending at its max: by the documented formula
+    // y = PAD + innerH - ((value-min)/span)*innerH with PAD=2, innerH=14,
+    // the final point (value=9, the max) lands at y = 2+14-14 = 2 — right
+    // at the top of the chart. The pre-fix reading was hard-anchored at
+    // y=HEIGHT-1=17, an 11px-tall reading whose glyph band (~y 9..17)
+    // the rising stroke's final approach cuts straight through.
+    const { container } = render(<Sparkline series={[1, 2, 3, 4, 9]} />);
+    const dot = container.querySelector('.chart-sparkline__dot');
+    const reading = container.querySelector('.chart-sparkline__reading');
+    expect(dot).not.toBeNull();
+    expect(reading).not.toBeNull();
+    expect(dot.getAttribute('cy')).toBe('2');
+
+    const dotY = Number(dot.getAttribute('cy'));
+    const readingY = Number(reading.getAttribute('y'));
+    // The reading must have moved off the old fixed bottom anchor (17) and
+    // must sit with a clear vertical gap from the final point — never
+    // striking through it.
+    expect(readingY).not.toBe(17);
+    expect(Math.abs(readingY - dotY)).toBeGreaterThanOrEqual(4);
+    expect(reading.textContent).toBe('9');
+  });
 });
 
 /* ------------------------------------------------------------------
@@ -309,10 +393,16 @@ describe('Strata', () => {
     expect(legendCounts).toEqual(['8,420', '1,210', '96']);
   });
 
-  it('renders safely on empty loc', () => {
+  it('renders safely on empty loc, with an explicit empty-state message and no bands', () => {
+    // A single featureless band reads as broken, not empty — the fix
+    // replaces it with an explicit muted-ink message (styled like the
+    // neighboring plates' empty states) and draws no bands at all.
     expect(() => render(<Strata loc={{}} />)).not.toThrow();
     const { container } = render(<Strata loc={{}} />);
     expect(container.querySelector('.chart-strata--empty')).not.toBeNull();
-    expect(container.querySelectorAll(`.${CSS.strataBand}`).length).toBe(1);
+    expect(container.querySelectorAll(`.${CSS.strataBand}`).length).toBe(0);
+    const message = container.querySelector('.chart-timeline__empty-label');
+    expect(message).not.toBeNull();
+    expect(message.textContent).toBe('No lines surveyed.');
   });
 });

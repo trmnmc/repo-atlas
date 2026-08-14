@@ -16,6 +16,10 @@ export interface SparklineProps {
 const WIDTH = 64;
 const HEIGHT = 18;
 const PAD = 2;
+/** Reading baseline when the line ends low in the chart (near the bottom). */
+const READING_Y_BOTTOM = HEIGHT - 1;
+/** Reading baseline when the line ends high in the chart (near the top). */
+const READING_Y_TOP = PAD + 5;
 
 export function Sparkline({ series }: SparklineProps) {
   const values = Array.isArray(series) ? series.filter((v) => Number.isFinite(v)) : [];
@@ -55,6 +59,15 @@ export function Sparkline({ series }: SparklineProps) {
   const last = points[points.length - 1];
   const lastValue = values[values.length - 1];
 
+  // Anchor the end-value reading relative to the final point's y so the
+  // numerals never sit where the stroke ends: when the line ends in the
+  // chart's upper half (a "high" reading) the approach segment tends to
+  // linger low on its way up, so the reading goes near the top, clear of
+  // it; when the line ends low, the approach tends to come from above, so
+  // the reading goes near the bottom (the pre-fix default, still correct
+  // for that case).
+  const readingY = last.y <= HEIGHT / 2 ? READING_Y_TOP : READING_Y_BOTTOM;
+
   return (
     <svg
       className="chart-sparkline"
@@ -64,7 +77,7 @@ export function Sparkline({ series }: SparklineProps) {
     >
       <path className="chart-sparkline__line" d={pathD} />
       <circle className="chart-sparkline__dot" cx={last.x} cy={last.y} r={1.6} />
-      <text className={`chart-sparkline__reading ${CSS.sounding}`} x={WIDTH} y={HEIGHT - 1} textAnchor="end">
+      <text className={`chart-sparkline__reading ${CSS.sounding}`} x={WIDTH} y={readingY} textAnchor="end">
         {lastValue}
       </text>
     </svg>
