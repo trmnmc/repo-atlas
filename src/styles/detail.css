@@ -179,6 +179,77 @@
 }
 
 /* ------------------------------------------------------------------
+   Unlogged Cargo (Fig. 9a — the uncommitted working tree)
+
+   The manifest a DIRTY notice promises. Vermilion is spent upstairs on
+   the header badge; everything in here is ink — small-caps serif group
+   captions over monospace paths, the same voice as the rest of the folio.
+   ------------------------------------------------------------------ */
+.cargo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.cargo-group {
+  min-width: 0;
+}
+
+.cargo-group__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: var(--hairline) solid var(--rule);
+  font-family: var(--font-serif);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.cargo-group__label {
+  font-variant-caps: small-caps;
+  letter-spacing: var(--tracking-caps);
+  color: var(--ink-muted);
+}
+
+.cargo-group__count {
+  flex: none;
+  color: var(--ink-faint);
+}
+
+.cargo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cargo-file {
+  padding: var(--space-1) 0;
+}
+
+.cargo-file__path {
+  display: block;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+}
+
+.cargo-truncated,
+.cargo-stale {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-faint);
+}
+
+.cargo-stale {
+  color: var(--ink-muted);
+}
+
+/* ------------------------------------------------------------------
    BranchList (Fig. 10 — Charted Branches)
    ------------------------------------------------------------------ */
 .branch-list {
