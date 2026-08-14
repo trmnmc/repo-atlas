@@ -18,9 +18,38 @@
  * j/k (and arrows) move the cursor, Enter drills into the highlighted repo,
  * via the frozen useKeyboardNav hook.
  */
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { CSS, advisoryClass } from '../../shared/contract.js';
 import { useKeyboardNav } from '../hooks/useKeyboardNav.ts';
+
+/**
+ * Persistence for the queue cursor across Overview unmount/remount (a
+ * drill-down-and-Back round trip). Keyed by repoId, not index — the queue
+ * order can shift between snapshots, but the repo the user was looking at
+ * stays findable. sessionStorage survives the unmount; a module-level
+ * fallback keeps things working if storage is unavailable (e.g. sandboxed
+ * test/embed contexts that throw on access).
+ */
+const SELECTION_STORAGE_KEY = 'atlas-notices-selection';
+let lastSelectedRepoIdFallback: string | null = null;
+
+function readPersistedSelection(): string | null {
+  try {
+    return window.sessionStorage.getItem(SELECTION_STORAGE_KEY);
+  } catch {
+    return lastSelectedRepoIdFallback;
+  }
+}
+
+function writePersistedSelection(repoId: string): void {
+  lastSelectedRepoIdFallback = repoId;
+  try {
+    window.sessionStorage.setItem(SELECTION_STORAGE_KEY, repoId);
+  } catch {
+    // sessionStorage unavailable — the module-level fallback still covers
+    // same-session restores.
+  }
+}
 
 /** Minimal structural view of a RepoSummary — whatever a notice row needs. */
 export interface QueueRepo {
@@ -156,6 +185,37 @@ export function AttentionQueue({ entries, repos, nowIso, onSelect }: AttentionQu
     onSelect: handleKeyboardSelect,
   });
 
+  // Restore the cursor once, on mount, to wherever it sat before Overview
+  // (and this component with it) last unmounted — e.g. a drill-down-and-Back
+  // round trip. useKeyboardNav always starts at index 0 and has no way to
+  // take an initial index, so we push the restored position into it via its
+  // own setActiveIndex once rows are available.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (rows.length === 0) return;
+    restoredRef.current = true;
+    const persistedRepoId = readPersistedSelection();
+    if (!persistedRepoId) return;
+    const restoredIndex = rows.findIndex((row) => row.repoId === persistedRepoId);
+    if (restoredIndex > 0) setActiveIndex(restoredIndex);
+  }, [rows, setActiveIndex]);
+
+  // Keep the persisted selection in sync with the KEYBOARD cursor (j/k, and
+  // the restore above) — the next round trip reads this. A click drills
+  // straight into a repo rather than parking the cursor there, so it's
+  // deliberately excluded (skipClickPersistRef below) — existing click-then-
+  // Back-then-j/k behavior is unaffected by remembering a click's row.
+  const skipClickPersistRef = useRef(false);
+  useEffect(() => {
+    if (skipClickPersistRef.current) {
+      skipClickPersistRef.current = false;
+      return;
+    }
+    const row = rows[activeIndex];
+    if (row) writePersistedSelection(row.repoId);
+  }, [rows, activeIndex]);
+
   if (rows.length === 0) {
     return <p className="attention-queue__empty">All charts in order — nothing wants attention.</p>;
   }
@@ -184,6 +244,10 @@ export function AttentionQueue({ entries, repos, nowIso, onSelect }: AttentionQu
               data-ranked={row.ranked ? 'true' : 'false'}
               aria-current={active ? 'true' : undefined}
               onClick={() => {
+                // Highlights the clicked row for the instant before the view
+                // switches, but does not move the persisted cursor — see
+                // skipClickPersistRef above.
+                skipClickPersistRef.current = true;
                 setActiveIndex(index);
                 onSelect(row.repoId);
               }}

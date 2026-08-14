@@ -104,6 +104,7 @@ afterEach(() => {
   vi.useRealTimers();
   window.history.replaceState(null, '', '/');
   window.localStorage.clear();
+  window.sessionStorage.clear();
   document.documentElement.removeAttribute('data-theme');
 });
 
@@ -337,6 +338,39 @@ describe('Fig. 1 — attention queue', () => {
     fireEvent.keyDown(window, { key: 'j' });
     fireEvent.keyDown(window, { key: 'Enter' });
     await waitFor(() => expect(window.location.hash).toBe('#/repo/field-notes'));
+  });
+
+  /* --------------------------------------------------------------
+     Taste finding: five consecutive j+Enter round-trips all reopened
+     the SAME repo — useKeyboardNav's index state dies when Overview
+     unmounts on drill-down, so every remount starts back at row 0.
+     Simulate the round trip directly (unmount, then remount) and
+     require the queue cursor to have survived it.
+     -------------------------------------------------------------- */
+  it('restores the queue cursor to the same repo across an unmount/remount round trip', () => {
+    const { unmount } = render(<Overview {...overviewProps()} />);
+
+    // j j: cursor moves ember-ledger (row 0) -> field-notes (row 1) -> tide-tables (row 2).
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j' });
+
+    // Simulates Enter-into-a-plate-and-Back: Overview (and the queue with
+    // it) unmounts, then remounts fresh.
+    unmount();
+    const { container } = render(<Overview {...overviewProps()} />);
+
+    const active = container.querySelector('.attention-queue__row--active');
+    expect(active).not.toBeNull();
+    expect(active!.getAttribute('data-repo-id')).toBe('tide-tables');
+    expect(active!.getAttribute('data-repo-id')).not.toBe(
+      container.querySelectorAll('.attention-queue__row')[0].getAttribute('data-repo-id'),
+    );
+
+    // And the cursor keeps moving from there: j advances to the NEXT row
+    // (old-survey), it does not restart the round trip at row 0.
+    fireEvent.keyDown(window, { key: 'j' });
+    const activeAfter = container.querySelector('.attention-queue__row--active');
+    expect(activeAfter!.getAttribute('data-repo-id')).toBe('old-survey');
   });
 });
 
