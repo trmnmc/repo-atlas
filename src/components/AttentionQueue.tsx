@@ -71,6 +71,26 @@ export function relativeAge(iso: string, nowIso: string): string {
   return `${days}d`;
 }
 
+/**
+ * The sort floor server/attention.js hands a dirty repo with NO commits
+ * ('1970-01-01T00:00:00.000Z'): a deterministic comparator anchor, never a
+ * real activity instant. Anything at or before 2000-01-01 is that floor —
+ * no repo in ~/Projects predates it, and git itself cannot hand back the
+ * epoch for a genuine commit.
+ */
+const ACTIVITY_FLOOR_MS = Date.parse('2000-01-01T00:00:00.000Z');
+
+/**
+ * Age reading for a notice row. Real instants age normally; the zero-commit
+ * epoch fallback reads as the Gazetteer's no-commit marker ('—') rather than
+ * a nonsense days-since-epoch figure like '20679d'.
+ */
+function ageLabel(iso: string, nowIso: string): string {
+  const then = Date.parse(iso);
+  if (Number.isFinite(then) && then <= ACTIVITY_FLOOR_MS) return '—';
+  return relativeAge(iso, nowIso);
+}
+
 /** Badge text for a row's reason. `no-remote` is informational, not attention. */
 function reasonLabel(reason: QueueEntry['reason'] | 'no-remote'): string {
   return reason === 'no-remote' ? 'no remote' : reason;
@@ -177,7 +197,7 @@ export function AttentionQueue({ entries, repos, nowIso, onSelect }: AttentionQu
                 <span className={`attention-queue__marker ${CSS.advisoryNoRemote}`}>no remote</span>
               )}
               <span className={`attention-queue__age ${CSS.sounding}`}>
-                {relativeAge(row.iso, nowIso)}
+                {ageLabel(row.iso, nowIso)}
               </span>
             </button>
           </li>

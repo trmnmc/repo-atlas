@@ -259,6 +259,38 @@ describe('Fig. 1 — attention queue', () => {
     expect(repoIds(ranked)).toEqual(['old-survey', 'tide-tables', 'field-notes', 'ember-ledger']);
   });
 
+  /* --------------------------------------------------------------
+     server/attention.js emits the epoch (1970-01-01) as the activity
+     instant for a dirty repo with NO commits — a deterministic sort
+     floor, not a real date. Aged naively it reads "20679d"; the row
+     must show the Gazetteer's no-commit marker instead.
+     -------------------------------------------------------------- */
+  it('shows an em-dash, never a days-since-epoch age, for the zero-commit epoch fallback', () => {
+    const withEpoch = [
+      { repoId: 'meridian', reason: 'dirty' as const, lastActivityIso: '1970-01-01T00:00:00.000Z' },
+      ...fixtureSnapshot.attention,
+    ];
+
+    const { container } = render(
+      <Overview {...overviewProps({ snapshot: { ...fixtureSnapshot, attention: withEpoch } })} />,
+    );
+
+    const row = container.querySelector('.attention-queue__row[data-repo-id="meridian"]');
+    expect(row).not.toBeNull();
+    const age = row!.querySelector('.attention-queue__age');
+    expect(age?.textContent).toBe('—');
+    expect(age?.textContent).not.toMatch(/\d+d/);
+    // The rest of the row is untouched.
+    expect(row!.querySelector('.advisory-reason')?.textContent).toBe('dirty');
+    expect(row!.querySelector('.attention-queue__name')?.textContent).toBe('meridian');
+    // Real activity instants still age normally on every other row.
+    expect(
+      container
+        .querySelector('.attention-queue__row[data-repo-id="ember-ledger"] .attention-queue__age')
+        ?.textContent,
+    ).toBe('1d');
+  });
+
   it('shows a no-remote badge, in ink, below the ranked notices — never "unpushed"', async () => {
     stubAtlasFetch();
     const { container } = await mountApp();
