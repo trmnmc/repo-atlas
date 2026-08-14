@@ -354,6 +354,26 @@
       "model": "opus",
       "attempts": 2,
       "notes": "verified cycle 9: em-dash renders for epoch fallback, 22/22 Overview tests"
+    },
+    {
+      "id": "R-015",
+      "title": "Server SSE + snapshot lifecycle fixes: scan-events stream must not res.end() a 200 SSE (EventSource reconnect loop replaying stale done); clear retained events after scan; generatedAt must be string per contract (never null); sequence cache-seed vs scan-completion writers",
+      "kind": "fix",
+      "priority": 1,
+      "value": "H",
+      "effort": "M",
+      "deps": [],
+      "files_hint": [
+        "server/index.js",
+        "server/index.test.js"
+      ],
+      "acceptance": "One completed scan delivers exactly one terminal done to a persistent EventSource client over 15s (no reconnect replay loop), /api/atlas before any scan returns a contract-valid snapshot, and a late cache seed can never overwrite a fresher scan result",
+      "packages": [],
+      "route_class": "core",
+      "status": "todo",
+      "model": "fable",
+      "attempts": 0,
+      "notes": "review-fix cycle 10 findings 1/5/6/7, all REPRODUCED with evidence; fixer was blocked by a wrong (SWARM) worktree assignment — tool bug journaled"
     }
   ]
 }

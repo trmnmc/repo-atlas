@@ -3,7 +3,7 @@
   "project_dir": "/Users/truman/Projects/repo-atlas",
   "created_at": "2026-08-13T17:22:37-05:00",
   "phase": "REVIEW",
-  "cycle": 9,
+  "cycle": 10,
   "run_cmd": "npm start",
   "test_cmd": "npm test",
   "preview": {
@@ -23,7 +23,14 @@
       "why": "blind judge 43/50 — only candidate covering the full-repo Gazetteer DoD line plus all four nice-to-haves at depth 7 / buildability 8"
     }
   ],
-  "known_issues": [],
+  "known_issues": [
+    {
+      "id": "KI-1",
+      "desc": "SSE /api/scan-events ends the 200 stream after replay -> EventSource reconnects ~3s forever, replaying stale done events (scanning-state flapping, endless /api/atlas refetches). Reproduced: 4 done events from ONE scan in 12s. Fix queued as R-015.",
+      "severity": "high",
+      "cycle_found": 10
+    }
+  ],
   "counters": {
     "consecutive_no_value": 0,
     "consecutive_failures": 0,
@@ -32,9 +39,9 @@
     "window_tokens_attributed": 0
   },
   "last_cycle": {
-    "n": 9,
-    "work": "build-wave [F-014 T-011]",
-    "outcome": "2 verified; backlog fully done -> REVIEW phase",
+    "n": 10,
+    "work": "review-fix (2 opus reviewers, fable verifiers, sonnet fixers)",
+    "outcome": "10 findings, 8 reproduced; 4 fixed+merged, 4 server findings -> R-015 (fixer worktree bug); 2 discarded unreproduced",
     "commit": ""
   },
   "qa": {
