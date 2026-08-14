@@ -1,0 +1,148 @@
+{
+  "summary": "QA against the live product: spec-only scenario author, executor, and a live-look agent; cheap look-only mode for post-merge checks; taste mode judges where the product gets boring",
+  "agentCount": 1,
+  "logs": [
+    "qa-verify @ 1786672750 | mode taste | cycle-013-taste | model taste: fable",
+    "qa-verify done: 0 scenario(s), 0 fail(s), 0 look finding(s) | taste: wears-thin (8 finding(s))"
+  ],
+  "result": {
+    "runId": "qa-verify@1786672750",
+    "mode": "taste",
+    "scenarios": [],
+    "results": [],
+    "look": null,
+    "taste": {
+      "verdict": "wears-thin",
+      "minutes_used": 14,
+      "flows_exercised": [
+        "first-load atlas scan (Fig 1-5)",
+        "Notices queue j/k keyboard nav + Enter drill-in (10+ round trips)",
+        "per-repo drill-down plates Fig 6-10 (rich repo, sparse repo, empty repo, unknown-id fallback: minecraft-agents, random, liqrbox-redesign, TEMPEST, BAT-Scanner, SWARM, mocktail, fluid, sdists-v9)",
+        "heatmap day-click cross-filter to Fig 3 (two days + clear affordance)",
+        "stats row live update after rescan",
+        "Gazetteer search by name and language + clear + sort by Lines",
+        "Cmd+K palette fuzzy jump",
+        "dark/light theme toggle with persistence across navigation",
+        "Rescan with progress indicator and live queue reorder"
+      ],
+      "boredom_findings": [
+        {
+          "where": "Fig. 1 Notices to Mariners (attention queue)",
+          "after_n_uses": 3,
+          "what_gets_stale": "39 of 40 repos carry a notice, and most are permanent: ~18 'no remote' rows for repos that are local-by-design (tstack2-placeholders, tstack2-mobile, etc.) and dirty rows aged 86d-132d that will never resolve themselves. Nothing can be acknowledged, muted, or dismissed, so by the third scan of the queue I had learned to ignore everything below the dirty block — banner blindness for the product's headline feature. The queue ranking itself is good (today's dirty repos on top), but the noise floor never drops.",
+          "suggestion": "Make notices acknowledgeable (persisted mute/snooze), and demote bare 'no remote' to a Gazetteer state column unless the repo also has unpushed commits. Fig. 1 should hold only genuinely actionable items — a queue of 8 beats a queue of 39.",
+          "severity": "notable"
+        },
+        {
+          "where": "Daily return visit (whole atlas page)",
+          "after_n_uses": 6,
+          "what_gets_stale": "Nothing marks what changed since the last look. When my mid-session rescan flipped repo-atlas and Fenley-Realestate to dirty, they silently appeared at the top of the queue with no 'new' marker — identical styling to rows that have sat there for months. Tomorrow's edition will look exactly like today's except ages tick +1d, so the returning-user reward (what's NEW?) requires re-reading and diffing the whole queue from memory.",
+          "suggestion": "The folio conceit already has the word for this: an 'Edition' delta. Flag notices new since the previous edition with a small mark, and add a one-line 'changes since the last survey' ribbon (n repos newly dirty, n resolved).",
+          "severity": "notable"
+        },
+        {
+          "where": "Dirty notice → repo plate handoff (Fig 8/9)",
+          "after_n_uses": 4,
+          "what_gets_stale": "The core loop's payoff is hollow: I click a DIRTY notice to find out what's dirty, and the plate shows only committed history — Ship's Log is commits, Recent Workings is committed files with commit timestamps. The one question the vermilion badge raises (which files are uncommitted, how much) is unanswered anywhere in the product. After a few drill-ins I realized the plate could never tell me anything I'd act on, and I'd have to alt-tab to a terminal — the loop dead-ends exactly where it should climax.",
+          "suggestion": "On dirty repos, add the working-tree state to the plate (or a 'Fig. 9a Unlogged Cargo': modified/untracked file list with counts). Even just 'nn files modified, nn untracked' in the header badge would let the drill-down answer the question the queue asked.",
+          "severity": "fundamental"
+        },
+        {
+          "where": "Fig. 2 heatmap day-click cross-filter",
+          "after_n_uses": 3,
+          "what_gets_stale": "Clicking a busy day yields only a marker plus '2026-08-10 — 278 commits that week' on Fig. 3. It never names which repos were active — the Gazetteer stays 40/40. By the third click the interaction is exhausted: the number changes, nothing opens up, no path to explore further. A cross-filter that filters nothing but a text label is a one-note trick.",
+          "suggestion": "Make the day-click actually cross-filter: narrow the Gazetteer to repos with commits that day (or list them under Fig. 3), each row clickable into its plate. Then 'what was I doing on Aug 10?' has a real answer.",
+          "severity": "notable"
+        },
+        {
+          "where": "Queue round-trip: Enter into plate, back to atlas",
+          "after_n_uses": 2,
+          "what_gets_stale": "Selection resets to the top of the queue on every return — five consecutive j+Enter round-trips all reopened the same repo. Working the queue top-to-bottom (the exact flow the footer advertises with 'j/k to move, Enter to open') means re-pressing j n times to reach item n+1 after every drill-in. The keyboard flow that makes the product feel fast on use one makes it feel like Sisyphus by use five.",
+          "suggestion": "Preserve queue selection and scroll position across the plate round-trip; add ]/[ (next/previous notice) on the plate itself so a triage pass never touches the mouse or the atlas page.",
+          "severity": "notable"
+        },
+        {
+          "where": "Repo plates for sparse/dormant repos (Fig 6-10)",
+          "after_n_uses": 8,
+          "what_gets_stale": "Every plate is the same five figures regardless of the repo, so drill-downs feel like a form letter by the eighth one — and for dormant repos it is a page of nothing: mocktail renders an all-blank year heatmap over 'No recent commits / No recently touched files / No branches'; minecraft-agents' Fig. 6 is 95% empty field with one July burst. The engraving style makes the emptiness handsome but no less empty.",
+          "suggestion": "Let the plate adapt to the repo: dormant repos lead with a one-line reckoning ('last touched 98d ago; nn uncommitted files aboard') and collapse empty figures; active repos keep the full spread. Sameness of structure is fine for a survey, but blank plates shouldn't get full-page real estate.",
+          "severity": "minor"
+        },
+        {
+          "where": "Fig. 4 stat tiles (Commits this month / Most active)",
+          "after_n_uses": 2,
+          "what_gets_stale": "The hand-drawn sparklines end in annotated numbers (361, 96) that disagree with the headline numbers above them (395, 120) with no label explaining what they are. The annotation style invites reading, then refuses to explain itself — a small mystery that stays a mystery on every visit.",
+          "suggestion": "Label the sparkline value ('last 30d' / 'prior month') or make the terminal value match the headline stat.",
+          "severity": "minor"
+        },
+        {
+          "where": "Rescan progress indicator",
+          "after_n_uses": 1,
+          "what_gets_stale": "Progress read 'surveying… 0/0' for its visible life, then the page was simply done ~30s later. No repo names ticking by, no denominator — the one moment the product does live work, it shows a placeholder.",
+          "suggestion": "Show 'surveying… 17/40 — BAT-Scanner' as repos complete; the scanner clearly knows the total and the current repo.",
+          "severity": "minor"
+        }
+      ],
+      "screenshots": [
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-first-load.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-jk-nav.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-drill-1.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-dayclick.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-palette.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-dark-repo.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-dark-home.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-stats-dark.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-013-taste-qa-rescan.png"
+      ],
+      "server_log_tail": "vite v8.2.1 building client environment for production... ✓ 38 modules transformed. dist/index.html 1.07 kB │ dist/assets/index-CaFJeF-z.css 18.50 kB │ dist/assets/index-Du4Fv754.js 224.75 kB ✓ built in 75ms — [repo-atlas] listening on http://localhost:4600 (server killed after session; port 4600 confirmed clear)"
+    },
+    "agents_used": 1,
+    "dead_agents": [],
+    "timestamp": "1786672750"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Author"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Execute"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Look"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 4,
+      "title": "Taste"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "taste",
+      "phaseIndex": 4,
+      "phaseTitle": "Taste",
+      "agentId": "ad0ee58c148136a76",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786672761824,
+      "queuedAt": 1786672760320,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "wears-thin",
+      "promptPreview": "You are the product-taste agent in an overnight autonomous swarm. Every\nother agent checks whether the product is CORRECT. Your only job is to\njudge whether it is GOOD — a correct product can still be boring, and a\npipeline with no taste seat will polish a boring product to a shine.\n\n## Running the app\nProject directory: /Users/truman/Projects/repo-atlas\nStart the dev server yourself, backgrounded…",
+      "lastProgressAt": 1786673306933,
+      "tokens": 65402,
+      "toolCalls": 49,
+      "durationMs": 545108,
+      "resultPreview": "{\"verdict\":\"wears-thin\",\"minutes_used\":14,\"flows_exercised\":[\"first-load atlas scan (Fig 1-5)\",\"Notices queue j/k keyboard nav + Enter drill-in (10+ round trips)\",\"per-repo drill-down plates Fig 6-10 (rich repo, sparse repo, empty repo, unknown-id fallback: minecraft-agents, random, liqrbox-redesign, TEMPEST, BAT-Scanner, SWARM, mocktail, fluid, sdists-v9)\",\"heatmap day-click cross-filter to Fig 3…"
+    }
+  ],
+  "totalTokens": 65402,
+  "totalToolCalls": 49
+}

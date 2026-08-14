@@ -374,6 +374,83 @@
       "model": "fable",
       "attempts": 1,
       "notes": "verified cycle 11: conductor persistent-SSE probe — exactly 1 terminal done in 20s window (41 events), suite 208 green"
+    },
+    {
+      "id": "D-016",
+      "title": "Working-tree state in the scan: gitFacts/scan emit workingTree {staged[],modified[],untracked[]} per repo (taste fundamental — server half)",
+      "kind": "feature",
+      "priority": 1,
+      "value": "H",
+      "effort": "M",
+      "deps": [],
+      "files_hint": [
+        "server/gitFacts.js",
+        "server/gitFacts.test.js",
+        "server/scan.js",
+        "server/scan.test.js"
+      ],
+      "acceptance": "A dirty fixture repo’s RepoSummary carries workingTree lists matching git status --porcelain exactly (staged/modified/untracked, capped at 50 each with a total count), and clean repos carry empty lists",
+      "packages": [],
+      "route_class": "core",
+      "status": "todo",
+      "model": "fable",
+      "attempts": 0,
+      "notes": "taste cycle 13 fundamental"
+    },
+    {
+      "id": "D-017",
+      "title": "Fig. 9a — Unlogged Cargo: dirty repo drill-down shows uncommitted files + header counts (taste fundamental — UI half)",
+      "kind": "feature",
+      "priority": 2,
+      "value": "H",
+      "effort": "M",
+      "deps": [],
+      "files_hint": [
+        "src/views/RepoDetail.tsx",
+        "src/views/RepoDetail.test.tsx",
+        "src/styles/detail.css"
+      ],
+      "acceptance": "Opening a dirty repo’s plate shows an Unlogged Cargo section listing modified/untracked/staged files with counts (and the dirty header badge shows ‘n modified, n untracked’); clean repos show no such section",
+      "packages": [],
+      "status": "todo",
+      "model": "opus",
+      "attempts": 0,
+      "notes": "taste cycle 13 fundamental"
+    },
+    {
+      "id": "P-018",
+      "title": "Preserve Notices queue selection across drill-down round-trips (taste notable #5)",
+      "kind": "polish",
+      "priority": 3,
+      "value": "M",
+      "effort": "S",
+      "deps": [],
+      "files_hint": [
+        "src/components/AttentionQueue.tsx",
+        "src/views/Overview.test.tsx"
+      ],
+      "acceptance": "After Enter into a repo plate and Back, the queue selection sits on the previously selected row (j advances to the next), verified in a mount test",
+      "packages": [],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": "taste cycle 13"
+    },
+    {
+      "id": "P-019",
+      "title": "MORNING BACKLOG (not tonight): acknowledgeable/mutable notices + no-remote demotion; edition delta (new-since-last-survey marks); day-click filters Gazetteer to that day’s repos; adaptive dormant plates; sparkline value labels; rescan progress repo names",
+      "kind": "polish",
+      "priority": 50,
+      "value": "M",
+      "effort": "L",
+      "deps": [],
+      "files_hint": [],
+      "acceptance": "(bundle placeholder — split before building)",
+      "packages": [],
+      "status": "todo",
+      "model": "sonnet",
+      "attempts": 0,
+      "notes": "taste cycle 13 notables 1/2/4 + minors 6/7/8; deliberately deferred, listed in REPORT hand-off"
     }
   ]
 }

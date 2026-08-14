@@ -2,8 +2,8 @@
   "idea": "local mission-control dashboard for ~/Projects: scan every git repo, attention queue first, then heatmap/timeline/drill-down",
   "project_dir": "/Users/truman/Projects/repo-atlas",
   "created_at": "2026-08-13T17:22:37-05:00",
-  "phase": "QA",
-  "cycle": 12,
+  "phase": "VALUE_LOOP",
+  "cycle": 13,
   "run_cmd": "npm start",
   "test_cmd": "npm test",
   "preview": {
@@ -21,6 +21,11 @@
       "cycle": 1,
       "what": "Design: TASTE-FORWARD Survey Folio (candidate C) — survey-atlas visual identity (Plates, tokens.css, vermilion-only attention accent), node:http server + SSE rescan progress, contract-freeze-first wave 0; grafted 6 steals: heatmap day-click cross-filter, injectable SSE transport w/ polling fallback (jsdom), shared fixture Snapshot + contract-lock test, rev-list parse-order fixture test, TZ pinned in vitest config, Cmd+K palette",
       "why": "blind judge 43/50 — only candidate covering the full-repo Gazetteer DoD line plus all four nice-to-haves at depth 7 / buildability 8"
+    },
+    {
+      "cycle": 13,
+      "what": "Taste verdict wears-thin with FUNDAMENTAL: dirty-notice drill-down never shows the uncommitted files. Remaining clock re-aimed at DEPTH (D-016 server + D-017 UI + P-018 selection), NOT polish. Notables/minors deferred to morning backlog P-019.",
+      "why": "taste-gate rule: fundamental re-aims clock at depth; the core loop must pay off where it currently dead-ends"
     }
   ],
   "known_issues": [
@@ -39,13 +44,14 @@
     "window_tokens_attributed": 0
   },
   "last_cycle": {
-    "n": 12,
-    "work": "QA full (author/executor/look)",
-    "outcome": "3/3 scenarios PASS vs independent git answer keys; look 0 findings; conductor re-run matched",
+    "n": 13,
+    "work": "taste pass (fable, 14 min)",
+    "outcome": "wears-thin; 1 fundamental + 4 notable + 3 minor -> D-016 D-017 P-018 + deferred P-019",
     "commit": ""
   },
   "qa": {
     "last_look_cycle": 7,
-    "last_full_qa_cycle": 12
+    "last_full_qa_cycle": 12,
+    "last_taste_cycle": 13
   }
 }
