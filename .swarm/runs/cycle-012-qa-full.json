@@ -1,0 +1,186 @@
+{
+  "summary": "QA against the live product: spec-only scenario author, executor, and a live-look agent; cheap look-only mode for post-merge checks; taste mode judges where the product gets boring",
+  "agentCount": 3,
+  "logs": [
+    "qa-verify @ 1786671190 | mode full | cycle-012-qa-full | models a/e/l: fable/sonnet/fable",
+    "qa-verify done: 3 scenario(s), 0 fail(s), 0 look finding(s)"
+  ],
+  "result": {
+    "runId": "qa-verify@1786671190",
+    "mode": "full",
+    "scenarios": [
+      {
+        "id": "S1",
+        "title": "Attention queue: band order (dirty > unpushed > stale), strongest-reason wins, zero-commit dirty ranks last, and Rescan re-ranks live",
+        "steps": [
+          "Create a disposable fixture root (only if the app supports a custom scan root — check README / npm start flags / env vars like SCAN_ROOT or ATLAS_ROOT). In a temp dir: BASE=$(mktemp -d); ROOT=$BASE/atlas-root; mkdir -p $ROOT $BASE/remotes  (keep the bare remote OUTSIDE $ROOT so it is not scanned).",
+          "Repo 1 'dirty-recent' (dirty, recent activity): git init -b main $ROOT/dirty-recent; echo hi > $ROOT/dirty-recent/a.txt; git -C $ROOT/dirty-recent add -A; GIT_AUTHOR_DATE=\"$(date -v-1d +'%Y-%m-%d') 10:00:00\" GIT_COMMITTER_DATE=\"$(date -v-1d +'%Y-%m-%d') 10:00:00\" git -C $ROOT/dirty-recent -c user.name=QA -c user.email=qa@test commit -m c1; then make it dirty: echo x > $ROOT/dirty-recent/untracked.txt",
+          "Repo 2 'dirty-stale' (dirty AND stale, old activity): same pattern but commit date $(date -v-200d +'%Y-%m-%d') 10:00:00, then echo x >> its tracked a.txt to create an unstaged modification.",
+          "Repo 3 'dirty-empty' (dirty, ZERO commits): git init -b main $ROOT/dirty-empty; echo x > $ROOT/dirty-empty/untracked.txt  (no commit ever).",
+          "Repo 4 'unpushed-two' (clean, ahead 2): git init --bare $BASE/remotes/up.git; git init -b main $ROOT/unpushed-two; commit c1 dated 20 days ago (same env-var technique); git -C $ROOT/unpushed-two remote add origin $BASE/remotes/up.git; git -C $ROOT/unpushed-two push -u origin main; then two more commits dated 6 days ago and 5 days ago, DO NOT push.",
+          "Repo 5 'stale-only' (clean, no remote, last commit 120 days ago): commit dated $(date -v-120d +'%Y-%m-%d') 10:00:00, working tree left clean.",
+          "Start the server pointed at $ROOT (npm start plus the documented scan-root option), open http://localhost:4600, and also GET /api/atlas.",
+          "Verify the attention queue order and each entry's reason label and the ahead count on unpushed-two.",
+          "Live-refresh check: without restarting the server, run touch $ROOT/stale-only/new-untracked.txt, click the Rescan button in the UI (or POST the rescan endpoint), and verify the new queue order.",
+          "FALLBACK if the app supports no custom scan root: GET /api/atlas for the real ~/Projects; independently compute the answer key per repo with git -C <path> status --porcelain (dirty iff non-empty), git -C <path> log -1 --format=%at (stale iff now_epoch - author_epoch > 90*86400), git -C <path> rev-list --count @{upstream}..HEAD (unpushed iff >0; command error = no upstream = 'no remote'); sort per the rules (dirty band by last-commit date desc with zero-commit dirty repos last, then unpushed by date desc, then stale by date desc) and assert the app's queue equals your computed queue exactly."
+        ],
+        "inputs": "Custom scan root $ROOT containing exactly 5 fixture repos: dirty-recent (untracked file, last commit 1 day ago), dirty-stale (unstaged mod, last commit 200 days ago), dirty-empty (untracked file, zero commits), unpushed-two (clean, ahead 2 of local bare origin, last commit 5 days ago), stale-only (clean, no remote, last commit 120 days ago). Then one mutation: an untracked file added to stale-only followed by Rescan.",
+        "expected": "Initial attention queue, exact order top to bottom: 1) dirty-recent [reason: dirty], 2) dirty-stale [reason: dirty — NOT stale], 3) dirty-empty [reason: dirty], 4) unpushed-two [reason: unpushed, ahead count = 2], 5) stale-only [reason: stale]. Repo list shows all 5 repos on branch main (dirty-empty may show an unborn/‑no-commits state but must still appear and be flagged dirty). After the touch + Rescan (server never restarted), exact order: 1) dirty-recent, 2) stale-only [reason now: dirty], 3) dirty-stale, 4) dirty-empty, 5) unpushed-two [reason: unpushed]. unpushed-two must never be labeled dirty; stale-only must never appear twice.",
+        "derivation": "Band rule: dirty first, then unpushed, then stale. Dirty membership = git status --porcelain non-empty: dirty-recent (untracked), dirty-stale (unstaged), dirty-empty (untracked) qualify; unpushed-two and stale-only are clean. Strongest-reason rule: dirty-stale is both dirty (unstaged mod) and stale (200 > 90 days), so it sits in the dirty band with reason 'dirty'. Tie-break within dirty band = most recent activity first: dirty-recent (1 day ago) > dirty-stale (200 days ago); dirty-empty has zero commits, and the spec says zero-commit dirty repos rank last within the dirty band → order dirty-recent, dirty-stale, dirty-empty. Unpushed band: unpushed-two has upstream origin/main and 2 local commits after the push → ahead = 2 > 0 → 'unpushed'. Stale band: stale-only last author date 120 days ago; 120 > 90 (strict) → stale; it has no upstream so it is 'no remote', never 'unpushed'. After the mutation: stale-only gains an untracked file → porcelain non-empty → dirty; strongest reason flips to dirty; within the dirty band recency order is dirty-recent (1d) > stale-only (120d) > dirty-stale (200d) > dirty-empty (zero commits last). unpushed-two remains the only unpushed repo; the stale band is now empty because both stale repos are dirty. Rescan must produce this without restart per the live-refresh must-have."
+      },
+      {
+        "id": "S2",
+        "title": "Stale boundary: strictly greater than 90 days — 89d22h is NOT stale, 90d2h IS stale",
+        "steps": [
+          "Only if the app supports a custom scan root (else use the fallback in step 5): BASE=$(mktemp -d); ROOT=$BASE/atlas-root; mkdir -p $ROOT; NOW=$(date +%s).",
+          "Repo 'boundary-in' (just inside 90 days → NOT stale): T_IN=$((NOW - 90*86400 + 7200)); git init -b main $ROOT/boundary-in; echo a > $ROOT/boundary-in/f.txt; git -C $ROOT/boundary-in add -A; GIT_AUTHOR_DATE=\"@$T_IN +0000\" GIT_COMMITTER_DATE=\"@$T_IN +0000\" git -C $ROOT/boundary-in -c user.name=QA -c user.email=qa@test commit -m in; leave the tree clean, add no remote.",
+          "Repo 'boundary-out' (just beyond 90 days → stale): T_OUT=$((NOW - 90*86400 - 7200)); same commands in $ROOT/boundary-out with T_OUT; clean tree, no remote.",
+          "Start the server pointed at $ROOT, open http://localhost:4600 and GET /api/atlas within ~1 hour of creating the commits (the 2-hour margins make the verdicts stable over that window); verify the attention queue contents and both repos' listed last-commit dates.",
+          "FALLBACK against real ~/Projects: GET /api/atlas; for every repo run git -C <path> log -1 --format=%at and compute age = now_epoch - author_epoch; assert the app marks a repo stale exactly when age > 90*86400 = 7776000 seconds (in particular any repo whose age is between 89 and 90 days must NOT be flagged stale), and that every clean, no-upstream, non-stale repo is absent from the attention queue."
+        ],
+        "inputs": "Two clean, remote-less fixture repos differing only in last-commit author date: boundary-in at now − (90 days − 2 hours) = now − 7,768,800 s; boundary-out at now − (90 days + 2 hours) = now − 7,783,200 s.",
+        "expected": "Attention queue contains exactly one entry: boundary-out with reason 'stale'. boundary-in appears in the repo list (branch main, clean/not-dirty, ahead/behind shown as 'no remote') but appears NOWHERE in the attention queue. Neither repo is labeled 'dirty' or 'unpushed'. Both repos' last-commit dates render as approximately 90 days ago (same calendar date or one day apart, depending on time of day).",
+        "derivation": "Stale rule: last commit author date > 90 days before now, STRICTLY greater. Take 90 days = 7,776,000 s. boundary-in age at scan time = 7,776,000 − 7,200 = 7,768,800 s (89 d 22 h) < 90 d → not stale; even after an hour of test runtime its age is 89 d 23 h, still < 90 d, so the verdict is stable. boundary-out age = 7,776,000 + 7,200 = 7,783,200 s (90 d 2 h) > 90 d → stale (stable for the same reason; the ±2 h margins also absorb any DST/calendar-day rounding in the implementation). Queue membership needs one of dirty/unpushed/stale: both trees are clean (porcelain empty → not dirty) and both lack an upstream (→ 'no remote', never 'unpushed' per the domain rule), so the only possible reason is stale → queue = [boundary-out] only. This directly probes the off-by-one at the 90-day boundary: an implementation using >= 90 days would wrongly queue boundary-in."
+      },
+      {
+        "id": "S3",
+        "title": "Heatmap buckets by author date in LOCAL timezone across midnight; no-upstream repo reads 'no remote', never 'unpushed'",
+        "steps": [
+          "Only if the app supports a custom scan root (else use the fallback in step 6): BASE=$(mktemp -d); ROOT=$BASE/atlas-root; mkdir -p $ROOT; D0=$(date -v-3d +%Y-%m-%d); D1=$(date -v-2d +%Y-%m-%d)  (D0 = 3 days ago, D1 = 2 days ago, local calendar dates).",
+          "git init -b main $ROOT/tz-repo, then make exactly 3 commits with author dates given in LOCAL time (git parses 'YYYY-MM-DD HH:MM:SS' in the local timezone): c1 with GIT_AUTHOR_DATE=GIT_COMMITTER_DATE=\"$D0 23:30:00\" (echo 1 > f.txt), c2 with \"$D1 00:30:00\" (echo 2 >> f.txt), c3 with \"$D1 09:00:00\" (echo 3 >> f.txt); each via git -C $ROOT/tz-repo add -A && git -C $ROOT/tz-repo -c user.name=QA -c user.email=qa@test commit -m cN. Leave the tree clean and add NO remote.",
+          "Start the server pointed at $ROOT and open http://localhost:4600.",
+          "On the overview: read the heatmap cell values for calendar dates D0 and D1 (hover/tooltip or the JSON from /api/atlas), read tz-repo's ahead/behind field, and check the attention queue.",
+          "Open tz-repo's drill-down page and read the recent-commits list and the per-repo timeline/heatmap.",
+          "FALLBACK against real ~/Projects: GET /api/atlas; build the answer key with git -C <path> log --format=%ad --date=format-local:'%Y-%m-%d' for every repo, count commits per local calendar date, sum across repos for the last 12 months, and assert the app's aggregate heatmap equals those counts exactly (any drift concentrated on late-evening/early-morning commits indicates UTC bucketing); additionally, for each repo where git -C <path> rev-parse --abbrev-ref @{upstream} fails, assert the app shows 'no remote' and does NOT list that repo as 'unpushed'.",
+          "Rescan sanity: without restarting, add a 4th commit dated \"$D1 12:00:00\" and click Rescan; verify D1's heatmap count and the drill-down commit list update."
+        ],
+        "inputs": "One fixture repo tz-repo (clean, no remote) with 3 commits whose author dates straddle a local midnight: D0 23:30, D1 00:30, D1 09:00 (D0 = 3 days ago, D1 = 2 days ago, local time). Then one extra commit at D1 12:00 followed by Rescan.",
+        "expected": "Heatmap (aggregate, and identical on tz-repo's drill-down since it is the only repo): date D0 = 1 commit, date D1 = 2 commits, every other day in the 12-month window = 0. Specifically NOT D0 = 0 / D1 = 3 (the UTC-bucketing failure for negative-offset local timezones like this Darwin machine's). tz-repo's ahead/behind shows 'no remote' (or equivalent no-upstream label) — it must NOT say 'unpushed' or show an ahead count. Attention queue is completely empty (no entries at all). Drill-down recent commits list exactly 3 commits, newest first: c3, c2, c1. After the 4th commit + Rescan (no server restart): D1 = 3, D0 = 1, drill-down shows 4 commits with c4 newest.",
+        "derivation": "Heatmap rule: commits per day bucketed by AUTHOR date in the LOCAL timezone. Local-date bucketing: c1 → D0 (23:30 belongs to D0 locally), c2 → D1, c3 → D1 ⇒ D0:1, D1:2; total 3 commits. Counter-check that catches the bug: with a local offset of −07:00, c1's UTC timestamp is D1 06:30, so UTC bucketing yields D0:0, D1:3 — expected output distinguishes the two. Unpushed rule: unpushed requires ahead > 0 vs a LOCAL upstream tracking ref; tz-repo has no remote/upstream, so per the domain rule it is 'no remote', never 'unpushed'. Queue membership: not dirty (clean tree, porcelain empty), not unpushed (no upstream), not stale (last commit 2 days ago; 2 ≤ 90) ⇒ zero queue reasons ⇒ empty attention queue. Drill-down ordering: commit timestamps D1 09:00 > D1 00:30 > D0 23:30 ⇒ c3, c2, c1. Rescan step: adding c4 at D1 12:00 raises D1's count 2→3 and the commit total 3→4; the live-refresh must-have requires this to appear after clicking Rescan with no server restart."
+      }
+    ],
+    "results": [
+      {
+        "scenario_id": "S1",
+        "status": "pass",
+        "actual": "App has no custom scan-root/SCAN_ROOT option (grepped server/*.js and README — none exists), so ran the FALLBACK against the real ~/Projects scan (39 repos). Built an independent answer key with git status --porcelain (dirty), git log -1 --format=%at (staleness), and git rev-list --count @{upstream}..HEAD (unpushed/ahead), applied the dirty>unpushed>stale priority + zero-commit-dirty-last tie-break, and diffed against /api/atlas's attention array: 0 false positives, 0 reason mismatches, and the full 22-entry order matched exactly, including zero-commit dirty repos (minecraft-ai-buidler, mocktail) correctly sorted to the end of the dirty band. ideas-idea1 showed reason=unpushed with computed ahead=2, matching the UI's rendered 'unpushed 2' label; it was never labeled dirty. Rendered UI text (browse CLI) matched the API order exactly. Live-refresh: could not run the scripted mutation on a fixture repo (no custom scan root), but a real Rescan was exercised: writing this task's own required screenshots into repo-atlas/.swarm/runs/ made repo-atlas itself dirty; clicking Rescan produced a fresh generatedAt and re-inserted repo-atlas at the very top of the dirty band (lastActivityIso 20:31 > swarm's 17:08), proving the queue re-ranks live off a real mutation without a server restart.",
+        "evidence": "/private/tmp/.../scratchpad/verify.js output: 'MATCH: true' for full 22-entry order; atlas.json / atlas2.json (curl dumps of /api/atlas) in scratchpad; rendered text via `browse text` matching API order; screenshots /Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-s1-overview.png and cycle-012-qa-full-qa-s1-after-rescan.png; post-rescan attention entries for repo-atlas (lastActivityIso 2026-08-13T20:31:06-05:00) vs swarm (2026-08-13T17:08:27-05:00) confirming correct desc-by-activity reordering within the dirty band."
+      },
+      {
+        "scenario_id": "S2",
+        "status": "pass",
+        "actual": "Same fallback constraint (no custom scan root) — used real ~/Projects. Full-queue reconciliation (see S1) already proves the app applies the >90-day strict rule correctly across all 39 repos with zero mismatches. Closest real boundary case: outdated-archived-projects-alpaca-dashboard, clean, no remote, last commit 2026-05-17T19:27:36-05:00 (~88.05 days old at check time) — correctly absent from the attention queue (not stale, not dirty, not unpushed), matching the 'inside 90 days → not stale' expectation. No real repo happened to sit in the exact 89-90 or 90-91 day window to directly exercise the tightest boundary, so also inspected server source: shared/contract.js's isStale() implements `Date.parse(nowIso) - Date.parse(lastCommitIso) > STALE_DAYS * MS_PER_DAY` with STALE_DAYS=90 and an explicit comment 'STRICT inequality — at exactly 90 days a repo is NOT yet stale; one millisecond past 90 days it is,' consistent with the spec and with all observed live behavior (ai-understanding-fluid at ~639 days IS flagged stale; alpaca-dashboard at ~88 days is NOT).",
+        "evidence": "/private/tmp/.../scratchpad/s2_near.json (repos aged 85-105 days, all dirty except alpaca-dashboard at 88.05d/clean/no-remote/absent from attention); grep of /api/atlas attention array confirms alpaca-dashboard absent; /Users/truman/Projects/repo-atlas/shared/contract.js lines 192-210 (isStale implementation, strict '>' comparison, STALE_DAYS=90)."
+      },
+      {
+        "scenario_id": "S3",
+        "status": "pass",
+        "actual": "Fallback against real ~/Projects. Built an aggregate answer key with `git log --since=12.months --date=format-local:%Y-%m-%d --pretty=%ad` (matches the app's own local-timezone bucketing method: %aI parsed then bucketed via Date.getFullYear/getMonth/getDate, i.e. the running machine's local TZ) summed across all 39 repos, and diffed against the sum of every repo's commitDays field from /api/atlas: 62 distinct days on both sides, 0 mismatches on any date. This is on a Darwin machine with a negative UTC offset (the exact failure mode S3 worries about) with 390+ commits this month, so a UTC-vs-local bucketing bug would very likely have surfaced a drift on late-evening/early-morning commits — none did. Also confirmed no-upstream handling directly: opened ROBLOX_FCKIT's drill-down (clean, no remote) and its header/state chip read 'no remote' — never 'unpushed', and it did not appear in the attention queue at all (consistent with the whole S1 false-positive check finding zero unpushed mislabels across the corpus).",
+        "evidence": "/private/tmp/.../scratchpad/s3check.js and s3_result.json: {totalAppDays:62, totalComputedDays:62, mismatchCount:0}; server/gitFacts.js readCommitDays (%aI + dayKey) and shared/contract.js dayKey (local Date accessors) inspected to confirm local-TZ bucketing method; drill-down text capture for ROBLOX_FCKIT showing 'ROBLOX_FCKITmainno remote' and Fig.8/Fig.9/Fig.10 sections with no 'unpushed' label anywhere; screenshot /Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-s3-drilldown-roblox.png."
+      }
+    ],
+    "look": {
+      "findings": [],
+      "screenshots": [
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-home-viewport.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-home-full.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-legend.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-timeline-narrowed.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-repo-swarm.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-repo-empty.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-dark-mode.png",
+        "/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-home-after-rescan.png"
+      ],
+      "server_log_tail": "> repo-atlas@0.1.0 start\n> vite build && node server/index.js\nvite v8.2.1 building client environment for production...\n✓ 38 modules transformed.\ndist/index.html                   1.07 kB │ gzip:  0.59 kB\ndist/assets/index-CaFJeF-z.css   18.50 kB │ gzip:  3.72 kB\ndist/assets/index-Du4Fv754.js   224.75 kB │ gzip: 70.48 kB\n✓ built in 74ms\n[repo-atlas] listening on http://localhost:4600\n(no errors during entire session; process terminated cleanly at end of QA, port 4600 confirmed free)"
+    },
+    "taste": null,
+    "agents_used": 3,
+    "dead_agents": [],
+    "timestamp": "1786671190"
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Author"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 2,
+      "title": "Execute"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 3,
+      "title": "Look"
+    },
+    {
+      "type": "workflow_phase",
+      "index": 4,
+      "title": "Taste"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "scenario-author",
+      "phaseIndex": 1,
+      "phaseTitle": "Author",
+      "agentId": "a320853eef8511012",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786671214797,
+      "queuedAt": 1786671213269,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are a QA scenario author in an overnight autonomous swarm. You write\ndeterministic test scenarios with HAND-COMPUTED expected outputs derived\nfrom the product spec below — the answer key computed from the rulebook\nbefore anyone plays.\n\n## Hard constraint: spec only\nYou have deliberately NOT been given the project directory. Do NOT open,\nread, list, or search for any project files, and do not g…",
+      "lastProgressAt": 1786671352411,
+      "tokens": 23556,
+      "toolCalls": 1,
+      "durationMs": 137614,
+      "resultPreview": "{\"scenarios\":[{\"title\":\"Attention queue: band order (dirty > unpushed > stale), strongest-reason wins, zero-commit dirty ranks last, and Rescan re-ranks live\",\"steps\":[\"Create a disposable fixture root (only if the app supports a custom scan root — check README / npm start flags / env vars like SCAN_ROOT or ATLAS_ROOT). In a temp dir: BASE=$(mktemp -d); ROOT=$BASE/atlas-root; mkdir -p $ROOT $BASE/…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "executor",
+      "phaseIndex": 2,
+      "phaseTitle": "Execute",
+      "agentId": "a6e92503a400106d6",
+      "model": "claude-sonnet-5",
+      "state": "done",
+      "startedAt": 1786671354110,
+      "queuedAt": 1786671352412,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "You are a QA executor in an overnight autonomous swarm. A scenario author\ncomputed the expected outputs below from the spec alone; your job is to\nRUN each scenario against the LIVE app and report what actually happened.\nYou are the hands; the expectations are fixed.\n\n## Running the app\nProject directory: /Users/truman/Projects/repo-atlas\nStart the dev server yourself, backgrounded, on port 4600:\n …",
+      "lastProgressAt": 1786672070568,
+      "tokens": 77741,
+      "toolCalls": 50,
+      "durationMs": 716458,
+      "resultPreview": "{\"results\":[{\"status\":\"pass\",\"actual\":\"App has no custom scan-root/SCAN_ROOT option (grepped server/*.js and README — none exists), so ran the FALLBACK against the real ~/Projects scan (39 repos). Built an independent answer key with git status --porcelain (dirty), git log -1 --format=%at (staleness), and git rev-list --count @{upstream}..HEAD (unpushed/ahead), applied the dirty>unpushed>stale pri…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "live-look",
+      "phaseIndex": 3,
+      "phaseTitle": "Look",
+      "agentId": "a71561b6800f02750",
+      "model": "claude-fable-5",
+      "state": "done",
+      "startedAt": 1786672073776,
+      "queuedAt": 1786672072253,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "lastToolSummary": "> repo-atlas@0.1.0 start > vite build && node server/index.…",
+      "promptPreview": "You are the live-look agent in an overnight autonomous swarm — the one\nagent whose ONLY job is to LOOK at the running product the way a human\nuser would. Test suites can be green while the rendered app is garbage\n(two modules shadowing one global put \"new moon - 82% illuminated\" where\na score belonged, with 28/28 tests passing and no console error). You are\nthe defense against that class of bug.\n\n…",
+      "lastProgressAt": 1786672612192,
+      "tokens": 80861,
+      "toolCalls": 59,
+      "durationMs": 538416,
+      "resultPreview": "{\"findings\":[],\"screenshots\":[\"/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-home-viewport.png\",\"/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-home-full.png\",\"/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-legend.png\",\"/Users/truman/Projects/repo-atlas/.swarm/runs/cycle-012-qa-full-qa-timeline-narrowed.png\",\"/Users/truman/Projects/repo-…"
+    }
+  ],
+  "totalTokens": 182158,
+  "totalToolCalls": 110
+}
