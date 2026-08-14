@@ -96,9 +96,17 @@ export function useAtlas(options: UseAtlasOptions = {}): UseAtlasResult {
   }
   const transport = transportRef.current;
 
+  // Tracks the most recently fetched snapshot's generatedAt, and (while the
+  // polling fallback is running) the generatedAt that was current the
+  // instant the in-flight scan was kicked off — the polling fallback's only
+  // way to tell "the old cached snapshot" from "the scan actually landed".
+  const generatedAtRef = useRef<string | null>(null);
+  const scanBaselineRef = useRef<string | null>(null);
+
   const fetchSnapshot = useCallback(async () => {
     const res = await fetch(ROUTES.atlas);
     const data = (await res.json()) as Snapshot;
+    generatedAtRef.current = data.generatedAt;
     setSnapshot(data);
     return data;
   }, []);
@@ -125,14 +133,21 @@ export function useAtlas(options: UseAtlasOptions = {}): UseAtlasResult {
   }, [transport, fetchSnapshot]);
 
   // Polling fallback: only when there is no transport at all. Each tick
-  // refetches /api/atlas; the resulting snapshot replacement is itself the
-  // atomic swap (a single setSnapshot call from a resolved fetch), and the
-  // scan is considered complete once that refreshed data is in hand.
+  // refetches /api/atlas, but /api/atlas is cache-first (serves the SAME
+  // pre-scan snapshot for the entire duration of the scan), so a single
+  // resolved fetch is not proof the scan finished — only a generatedAt that
+  // has moved past the pre-scan baseline is. Keep polling (the interval
+  // stays alive) until that happens; only then is the snapshot swap
+  // considered the terminal event and scanning cleared.
   useEffect(() => {
     if (transport) return undefined;
     if (!scanning) return undefined;
     const id = setInterval(() => {
-      fetchSnapshot().then(() => setScanning(false));
+      fetchSnapshot().then((data) => {
+        if (data.generatedAt !== scanBaselineRef.current) {
+          setScanning(false);
+        }
+      });
     }, POLL_INTERVAL_MS);
     return () => clearInterval(id);
   }, [transport, scanning, fetchSnapshot]);
@@ -141,6 +156,7 @@ export function useAtlas(options: UseAtlasOptions = {}): UseAtlasResult {
     const res = await fetch(ROUTES.rescan, { method: 'POST' });
     const data = (await res.json()) as { scanning?: boolean };
     if (data && data.scanning) {
+      scanBaselineRef.current = generatedAtRef.current;
       setScanning(true);
       setProgress({ done: 0, total: 0 });
     }
