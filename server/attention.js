@@ -14,6 +14,16 @@ import { ATTENTION_ORDER, isStale, sortAttention } from '../shared/contract.js';
 /** @typedef {import('../shared/contract.js').AttentionEntry} AttentionEntry */
 
 /**
+ * lastActivityIso fallback for zero-commit repos (lastCommit null). A dirty
+ * repo with no commit history still needs an attention entry; the epoch is a
+ * valid ISO instant that Date.parse reads as 0, so through the frozen
+ * attentionComparator these entries deterministically rank AFTER any
+ * equally-reasoned entry with real commit activity, and tie stably (input
+ * order) with each other. Pinned by server/attention.test.js.
+ */
+const ZERO_COMMIT_ACTIVITY_ISO = '1970-01-01T00:00:00.000Z';
+
+/**
  * @typedef {Object} Classification
  * @property {AttentionReason[]} reasons
  *     Every reason that applies, in ATTENTION_ORDER priority (a repo may be
@@ -35,6 +45,8 @@ import { ATTENTION_ORDER, isStale, sortAttention } from '../shared/contract.js';
  *                 reason such as dirty/stale when one applies).
  *   - stale     — last commit author date STRICTLY more than 90 days before
  *                 nowIso (contract isStale; exactly 90 days is not stale).
+ *                 A zero-commit repo (lastCommit null) has no author date and
+ *                 can NEVER be stale — but it can absolutely be dirty.
  *
  * @param {RepoSummary} repo
  * @param {string} nowIso ISO-8601 reference instant (Snapshot.generatedAt).
@@ -45,7 +57,7 @@ export function classify(repo, nowIso) {
   const applies = {
     dirty: repo.dirty,
     unpushed: repo.upstream.state === 'tracked' && repo.upstream.aheadBy > 0,
-    stale: isStale(repo.lastCommit.iso, nowIso),
+    stale: repo.lastCommit !== null && isStale(repo.lastCommit.iso, nowIso),
   };
   const reasons = ATTENTION_ORDER.filter((reason) => applies[reason]);
   const displayState =
@@ -57,10 +69,12 @@ export function classify(repo, nowIso) {
  * Build the pre-sorted attention queue for a snapshot.
  *
  * Each repo needing attention contributes exactly ONE entry, carrying its
- * strongest reason and lastActivityIso = last commit author date. Repos that
- * are 'ok' or merely 'no-remote' are excluded. Ordering (dirty > unpushed >
- * stale, then most-recent activity first, stable on exact ties) is delegated
- * to the contract's sortAttention.
+ * strongest reason and lastActivityIso = last commit author date — or the
+ * epoch fallback for zero-commit repos (a dirty repo with lastCommit null
+ * still MUST appear; see ZERO_COMMIT_ACTIVITY_ISO). Repos that are 'ok' or
+ * merely 'no-remote' are excluded. Ordering (dirty > unpushed > stale, then
+ * most-recent activity first, stable on exact ties) is delegated to the
+ * contract's sortAttention.
  *
  * @param {RepoSummary[]} repos
  * @param {string} nowIso ISO-8601 reference instant (Snapshot.generatedAt).
@@ -75,7 +89,7 @@ export function buildAttention(repos, nowIso) {
     entries.push({
       repoId: repo.id,
       reason: reasons[0],
-      lastActivityIso: repo.lastCommit.iso,
+      lastActivityIso: repo.lastCommit !== null ? repo.lastCommit.iso : ZERO_COMMIT_ACTIVITY_ISO,
     });
   }
   return sortAttention(entries);
