@@ -102,6 +102,38 @@ describe('RepoDetail', () => {
     expect(container.querySelector('.repo-detail__branch')?.textContent).toBe('main');
   });
 
+  it('offers folder, terminal, and copy-path actions', () => {
+    const repo = fixtureRepo('ember-ledger');
+    const { getByRole } = render(<RepoDetail repo={repo} onBack={() => {}} />);
+    expect(getByRole('button', { name: 'Open folder' })).toBeTruthy();
+    expect(getByRole('button', { name: 'Open terminal here' })).toBeTruthy();
+    expect(getByRole('button', { name: 'Copy path' })).toBeTruthy();
+  });
+
+  it('sends a tightly-scoped local request when opening a folder', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal('fetch', fetchMock);
+    const repo = fixtureRepo('ember-ledger');
+    const { getByRole, findByText } = render(<RepoDetail repo={repo} onBack={() => {}} />);
+
+    fireEvent.click(getByRole('button', { name: 'Open folder' }));
+
+    expect(await findByText('Finder opened.')).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/repo/${encodeURIComponent(repo.id)}/open/finder`,
+      { method: 'POST', headers: { 'X-Repo-Atlas-Action': '1' } },
+    );
+    vi.unstubAllGlobals();
+  });
+
+  it('explains the most useful next step from repository state', () => {
+    const dirtyRepo = fixtureRepo('ember-ledger');
+    const { container } = render(<RepoDetail repo={dirtyRepo} onBack={() => {}} />);
+    expect(container.querySelector('.repo-detail__next-step')?.textContent).toContain(
+      'Uncommitted files are listed below',
+    );
+  });
+
   /* ----------------------------------------------------------------
      Per-repo scoping — the acceptance criterion's core claim
      ----------------------------------------------------------------

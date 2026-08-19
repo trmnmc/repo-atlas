@@ -56,6 +56,61 @@
   gap: var(--space-3);
 }
 
+.repo-detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.repo-detail__action {
+  appearance: none;
+  border: var(--hairline) solid var(--rule-strong);
+  border-radius: 2px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper-sunken);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.repo-detail__action--primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+
+.repo-detail__action:hover:not(:disabled),
+.repo-detail__action:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.repo-detail__action:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.repo-detail__next-step {
+  max-width: 70ch;
+  margin: var(--space-1) 0 0;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+}
+
+.repo-detail__action-status {
+  min-height: 1.2em;
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+.repo-detail__action-status--error {
+  color: var(--vermilion-ink);
+}
+
 .repo-detail__branch {
   color: var(--ink-muted);
 }

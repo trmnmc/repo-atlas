@@ -101,9 +101,9 @@ async function writeDistFixture(distDir) {
 }
 
 /**
- * @param {{ scanFn?: Function, initialCache?: object }} [opts]
+ * @param {{ scanFn?: Function, initialCache?: object, repoActionFn?: Function }} [opts]
  */
-async function startTestServer({ scanFn, initialCache } = {}) {
+async function startTestServer({ scanFn, initialCache, repoActionFn } = {}) {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'atlas-server-'));
   const distDir = path.join(tmpDir, 'dist');
   const cacheFile = path.join(tmpDir, '.atlas-cache.json');
@@ -120,6 +120,7 @@ async function startTestServer({ scanFn, initialCache } = {}) {
     scanFn: usedScanFn,
     nowFn: () => FIXED_NOW,
     distDir,
+    repoActionFn,
   });
   await new Promise((resolve) => server.listen(0, resolve));
   const { port } = server.address();
@@ -492,6 +493,56 @@ describe('GET /api/repo/:id', () => {
 
     const res = await fetch(`${t.baseUrl}/api/repo/does-not-exist`);
     expect(res.status).toBe(404);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* POST /api/repo/:id/open/:action — local control panel               */
+/* ------------------------------------------------------------------ */
+
+describe('POST /api/repo/:id/open/:action', () => {
+  it('opens only the scanned repository path for an allowlisted action', async () => {
+    const repoActionFn = vi.fn().mockResolvedValue(undefined);
+    const t = await startTestServer({ initialCache: fixtureSnapshot, repoActionFn });
+    cleanups.push(t.close);
+
+    const res = await fetch(`${t.baseUrl}/api/repo/tide-tables/open/finder`, {
+      method: 'POST',
+      headers: { 'X-Repo-Atlas-Action': '1' },
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, action: 'finder' });
+    const repo = fixtureSnapshot.repos.find((candidate) => candidate.id === 'tide-tables');
+    expect(repoActionFn).toHaveBeenCalledWith(repo.path, 'finder');
+  });
+
+  it('rejects requests without the local-action header', async () => {
+    const repoActionFn = vi.fn().mockResolvedValue(undefined);
+    const t = await startTestServer({ initialCache: fixtureSnapshot, repoActionFn });
+    cleanups.push(t.close);
+
+    const res = await fetch(`${t.baseUrl}/api/repo/tide-tables/open/terminal`, {
+      method: 'POST',
+    });
+    expect(res.status).toBe(403);
+    expect(repoActionFn).not.toHaveBeenCalled();
+  });
+
+  it('rejects unknown actions and unknown repositories', async () => {
+    const repoActionFn = vi.fn().mockResolvedValue(undefined);
+    const t = await startTestServer({ initialCache: fixtureSnapshot, repoActionFn });
+    cleanups.push(t.close);
+
+    const headers = { 'X-Repo-Atlas-Action': '1' };
+    const badAction = await fetch(`${t.baseUrl}/api/repo/tide-tables/open/delete`, {
+      method: 'POST', headers,
+    });
+    const badRepo = await fetch(`${t.baseUrl}/api/repo/does-not-exist/open/finder`, {
+      method: 'POST', headers,
+    });
+    expect(badAction.status).toBe(400);
+    expect(badRepo.status).toBe(404);
+    expect(repoActionFn).not.toHaveBeenCalled();
   });
 });
 

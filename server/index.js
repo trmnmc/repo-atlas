@@ -27,6 +27,7 @@ import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ROUTES } from '../shared/contract.js';
 import { scan } from './scan.js';
@@ -47,6 +48,30 @@ export const DEFAULT_CACHE_FILE = path.join(PROJECT_ROOT, '.atlas-cache.json');
 
 /** The production port this server listens on when run directly. */
 export const DEFAULT_PORT = 4600;
+
+/** Native actions exposed by the local-only repository control panel. */
+const REPO_ACTIONS = new Set(['finder', 'terminal']);
+
+/**
+ * Ask macOS to reveal a repository or open a Terminal window in it.
+ * `execFile` receives an argv array (never a shell string), and callers can
+ * only reach this function with a path taken from the current scan.
+ *
+ * @param {string} repoPath absolute path from RepoSummary.path
+ * @param {'finder' | 'terminal'} action
+ * @returns {Promise<void>}
+ */
+export function openRepoNative(repoPath, action) {
+  const args = action === 'finder'
+    ? ['-R', repoPath]
+    : ['-a', 'Terminal', repoPath];
+  return new Promise((resolve, reject) => {
+    execFile('/usr/bin/open', args, (error) => {
+      if (error) reject(error);
+      else resolve();
+    });
+  });
+}
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -103,6 +128,7 @@ function writeSseEvent(res, event) {
  *   port?: number,
  *   nowFn?: () => string,
  *   distDir?: string,
+ *   repoActionFn?: (repoPath: string, action: 'finder' | 'terminal') => Promise<void>,
  * }} config
  * @returns {import('node:http').Server}
  */
@@ -113,6 +139,7 @@ export function createServer({
   port = DEFAULT_PORT,
   nowFn = () => new Date().toISOString(),
   distDir = DEFAULT_DIST_DIR,
+  repoActionFn = openRepoNative,
 }) {
   /**
    * @type {{
@@ -280,6 +307,48 @@ export function createServer({
   }
 
   /**
+   * Perform one tightly allowlisted local action for a repository in the
+   * latest scan. Requiring a custom header prevents a plain cross-site form
+   * from launching local apps; scripted cross-origin requests are preflighted
+   * and this server deliberately grants no CORS access.
+   *
+   * @param {import('node:http').IncomingMessage} req
+   * @param {import('node:http').ServerResponse} res
+   * @param {string} id
+   * @param {string} action
+   */
+  async function handleRepoAction(req, res, id, action) {
+    if (req.headers['x-repo-atlas-action'] !== '1') {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'local action header required' }));
+      return;
+    }
+    if (!REPO_ACTIONS.has(action)) {
+      res.writeHead(400, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unsupported repository action' }));
+      return;
+    }
+
+    const snapshot = await getSnapshot();
+    const repo = snapshot.repos.find((candidate) => candidate.id === id);
+    if (!repo) {
+      res.writeHead(404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `no repo with id "${id}"` }));
+      return;
+    }
+
+    try {
+      await repoActionFn(repo.path, /** @type {'finder' | 'terminal'} */ (action));
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ ok: true, action }));
+    } catch (error) {
+      console.error(`[repo-atlas] ${action} action failed:`, error);
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: `could not open ${action}` }));
+    }
+  }
+
+  /**
    * Serve dist/ for any non-API GET. Resolves strictly inside distDir
    * (URL parsing already collapses "../" segments, and this re-checks by
    * hand so containment holds even for inputs that bypass URL parsing).
@@ -330,6 +399,10 @@ export function createServer({
     }
     if (req.method === 'GET' && pathname === ROUTES.scanEvents) {
       return handleScanEvents(req, res);
+    }
+    const repoActionMatch = /^\/api\/repo\/([^/]+)\/open\/([^/]+)$/.exec(pathname);
+    if (req.method === 'POST' && repoActionMatch) {
+      return handleRepoAction(req, res, repoActionMatch[1], repoActionMatch[2]);
     }
     if (req.method === 'GET' && pathname.startsWith('/api/repo/')) {
       const id = pathname.slice('/api/repo/'.length);

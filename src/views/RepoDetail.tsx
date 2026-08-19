@@ -80,6 +80,12 @@ export interface RepoDetailProps {
   onBack: () => void;
 }
 
+type RepoNativeAction = 'finder' | 'terminal';
+
+type ActionState =
+  | { kind: 'idle'; message: '' }
+  | { kind: 'working' | 'success' | 'error'; message: string };
+
 /**
  * The most recent day the repo's own heatmap grid should reach: the
  * lexicographically-largest (== chronologically-largest, "YYYY-MM-DD")
@@ -166,6 +172,38 @@ function DirtyBadge({ dirty, manifest }: { dirty: boolean; manifest: CargoEntry[
   );
 }
 
+/** Copy text with a small legacy fallback for local browsers. */
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  const field = document.createElement('textarea');
+  field.value = text;
+  field.setAttribute('readonly', '');
+  field.style.position = 'fixed';
+  field.style.opacity = '0';
+  document.body.appendChild(field);
+  field.select();
+  const copied = document.execCommand('copy');
+  field.remove();
+  if (!copied) throw new Error('copy failed');
+}
+
+function nextStep(repo: RepoDetailRepo): string {
+  if (repo.dirty) {
+    return 'Uncommitted files are listed below. Open a terminal here when you are ready to save or discard them.';
+  }
+  if (repo.upstream?.state === 'tracked' && (repo.upstream.aheadBy ?? 0) > 0) {
+    const count = repo.upstream.aheadBy ?? 0;
+    return `${count} local ${count === 1 ? 'commit is' : 'commits are'} ready to push. Open a terminal here to send them upstream.`;
+  }
+  if (!repo.upstream || repo.upstream.state === 'none') {
+    return 'This project is local-only. Open its folder to work with the files, or open a terminal to connect a remote later.';
+  }
+  return 'This project is clean and in sync. Open its folder or terminal to continue working on it.';
+}
+
 /**
  * Fig. 9a body. Vermilion is spent on the header badge alone: the paths
  * here are plain ink, mono, so the eye reads the file list as data and not
@@ -210,6 +248,7 @@ function UnloggedCargo({
 
 export function RepoDetail({ repo, onBack }: RepoDetailProps) {
   const [filterDay, setFilterDay] = useState<string | undefined>(undefined);
+  const [actionState, setActionState] = useState<ActionState>({ kind: 'idle', message: '' });
 
   const commitDays = repo.commitDays ?? {};
   const endDayKey = repoEndDayKey(repo);
@@ -217,6 +256,34 @@ export function RepoDetail({ repo, onBack }: RepoDetailProps) {
 
   function handleDayClick(day: string) {
     setFilterDay((current) => (current === day ? undefined : day));
+  }
+
+  async function runNativeAction(action: RepoNativeAction) {
+    const label = action === 'finder' ? 'Finder' : 'Terminal';
+    setActionState({ kind: 'working', message: `Opening ${label}…` });
+    try {
+      const response = await fetch(
+        `/api/repo/${encodeURIComponent(repo.id)}/open/${action}`,
+        {
+          method: 'POST',
+          headers: { 'X-Repo-Atlas-Action': '1' },
+        },
+      );
+      if (!response.ok) throw new Error(`request failed (${response.status})`);
+      setActionState({ kind: 'success', message: `${label} opened.` });
+    } catch {
+      setActionState({ kind: 'error', message: `Could not open ${label}.` });
+    }
+  }
+
+  async function copyRepoPath() {
+    setActionState({ kind: 'working', message: 'Copying path…' });
+    try {
+      await copyText(repo.path);
+      setActionState({ kind: 'success', message: 'Project path copied.' });
+    } catch {
+      setActionState({ kind: 'error', message: 'Could not copy the project path.' });
+    }
   }
 
   return (
@@ -233,6 +300,40 @@ export function RepoDetail({ repo, onBack }: RepoDetailProps) {
           <UpstreamChip upstream={repo.upstream} />
           <DirtyBadge dirty={repo.dirty} manifest={manifest} />
         </div>
+        <div className="repo-detail__actions" aria-label="Project actions">
+          <button
+            type="button"
+            className="repo-detail__action repo-detail__action--primary"
+            onClick={() => void runNativeAction('finder')}
+            disabled={actionState.kind === 'working'}
+          >
+            Open folder
+          </button>
+          <button
+            type="button"
+            className="repo-detail__action"
+            onClick={() => void runNativeAction('terminal')}
+            disabled={actionState.kind === 'working'}
+          >
+            Open terminal here
+          </button>
+          <button
+            type="button"
+            className="repo-detail__action"
+            onClick={() => void copyRepoPath()}
+            disabled={actionState.kind === 'working'}
+          >
+            Copy path
+          </button>
+        </div>
+        <p className="repo-detail__next-step">{nextStep(repo)}</p>
+        <p
+          className={`repo-detail__action-status repo-detail__action-status--${actionState.kind}`}
+          role="status"
+          aria-live="polite"
+        >
+          {actionState.message}
+        </p>
       </header>
 
       <Plate figure={6} caption="Commit Soundings">
