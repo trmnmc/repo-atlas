@@ -176,3 +176,72 @@ export function spliceClaudeMd(existing, block) {
   const tail = existing.slice(afterEnd).replace(/^\n/, '');
   return `${existing.slice(0, start)}${block}${tail}`;
 }
+
+/* ------------------------------------------------------------------ */
+/* Part 2: console report                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * @param {ProjectRecord} r
+ * @returns {string}
+ */
+export function candidateLine(r) {
+  const parts = [`${r.kind}`, `last activity ${fmtDay(r.activityIso)}`, fmtBytes(r.bytes)];
+  if (r.remote !== null) parts.push(`remote ${r.remote}`);
+  if (r.dirty) parts.push('WARNING: uncommitted changes');
+  if (r.aheadBy > 0) parts.push(`WARNING: ${r.aheadBy} unpushed commit${r.aheadBy === 1 ? '' : 's'}`);
+  return `${r.name} — ${parts.join(' · ')}`;
+}
+
+/** @param {string} text @param {number} width */
+function pad(text, width) {
+  return text.length >= width ? text : text + ' '.repeat(width - text.length);
+}
+
+/**
+ * @param {{ records: ProjectRecord[], notices: Notices, config: OrganizeConfig, staleDays: number }} input
+ * @returns {string}
+ */
+export function renderReport({ records, notices, config, staleDays }) {
+  const s = summarize(records);
+  const groups = groupByTheme(records, config);
+  const out = [];
+  out.push(`Organize report — ${s.total} projects (stale after ${staleDays} days)`);
+  out.push(
+    `Status: ${s.byStatus.active} active · ${s.byStatus.paused} paused · ${s.byStatus.stale} stale · ${s.byStatus.empty} empty · ${s.byStatus.unknown} unknown`,
+  );
+  out.push(`Themes: ${groups.map((g) => `${g.theme} ${g.records.length}`).join(' · ')}`);
+  out.push('');
+
+  const nameW = Math.max(4, ...records.map((r) => r.name.length)) + 2;
+  for (const g of groups) {
+    out.push(`== ${g.theme} (${g.records.length})`);
+    out.push(`  ${pad('NAME', nameW)}${pad('KIND', 8)}${pad('STATUS', 9)}${pad('LAST', 12)}${pad('SIZE', 9)}REMOTE`);
+    for (const r of g.records) {
+      out.push(
+        `  ${pad(r.name, nameW)}${pad(r.kind, 8)}${pad(r.status, 9)}${pad(fmtDay(r.activityIso), 12)}${pad(fmtBytes(r.bytes), 9)}${r.remote ?? DASH}`,
+      );
+    }
+    out.push('');
+  }
+
+  const names = (list) =>
+    list.length === 0 ? '  (none)' : `  ${list.slice().sort((a, b) => a.localeCompare(b, 'en', { sensitivity: 'base' })).join(', ')}`;
+  out.push(`== Archive candidates (${notices.candidates.length})`);
+  if (notices.candidates.length === 0) out.push('  (none)');
+  for (const r of notices.candidates) out.push(`  ${candidateLine(r)}`);
+  out.push(`== Empty folders (${notices.empties.length})`);
+  out.push(names(notices.empties.map((r) => r.name)));
+  out.push(`== Unsorted (${notices.unsorted.length})`);
+  out.push(names(notices.unsorted.map((r) => r.name)));
+  out.push(`== Possible duplicates (${notices.duplicates.length})`);
+  if (notices.duplicates.length === 0) out.push('  (none)');
+  for (const d of notices.duplicates) {
+    const why = d.reason === 'remote' ? `same remote ${d.key}` : `name suffix of ${d.key}`;
+    out.push(`  ${d.names.join(', ')} — ${why}`);
+  }
+  out.push(`== Loose files at the root (${notices.looseFiles.length})`);
+  out.push(names(notices.looseFiles));
+  out.push('');
+  return out.join('\n');
+}

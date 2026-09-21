@@ -14,6 +14,8 @@ import {
   renderProjectsMd,
   renderClaudeBlock,
   spliceClaudeMd,
+  candidateLine,
+  renderReport,
 } from './render.js';
 
 const NOW = '2026-09-21T12:00:00-05:00';
@@ -119,5 +121,42 @@ describe('renderClaudeBlock / spliceClaudeMd', () => {
     expect(out).toContain('tail note\n');
     expect(out).not.toContain('old stuff');
     expect(out.split(MARK_END).length).toBe(2);
+  });
+});
+
+describe('candidateLine', () => {
+  it('describes a candidate with warnings', () => {
+    const r = rec('daily-ai-updates', { status: 'stale', dirty: true, aheadBy: 2, bytes: 1.4 * 1024 ** 3, remote: 'trmnmc/daily-ai', activityIso: '2026-05-10T12:00:00-05:00' });
+    const line = candidateLine(r);
+    expect(line).toBe('daily-ai-updates — git · last activity 2026-05-10 · 1.4 GB · remote trmnmc/daily-ai · WARNING: uncommitted changes · WARNING: 2 unpushed commits');
+  });
+  it('omits warnings and remote when clean', () => {
+    const r = rec('random', { kind: 'folder', status: 'stale', bytes: 512, activityIso: '2026-05-10T12:00:00-05:00' });
+    expect(candidateLine(r)).toBe('random — folder · last activity 2026-05-10 · 512 B');
+  });
+});
+
+describe('renderReport', () => {
+  const text = renderReport({ records, notices, config: defaultConfig(), staleDays: 90 });
+  it('leads with counts', () => {
+    expect(text).toContain('Organize report — 4 projects (stale after 90 days)');
+    expect(text).toContain('Status: 2 active · 0 paused · 1 stale · 1 empty · 0 unknown');
+    expect(text).toContain('Themes: minecraft 1 · finance 1 · unsorted 2');
+  });
+  it('lists every theme group with aligned rows', () => {
+    expect(text).toContain('== minecraft (1)');
+    expect(text).toMatch(/minecraft-plugins\s+git\s+active\s+2026-09-01\s+10 B\s+—/);
+    expect(text).toContain('== unsorted (2)');
+  });
+  it('lists the notices', () => {
+    expect(text).toContain('== Archive candidates (1)\n  alpaca-v2 — git · last activity 2026-06-10 · 10 B · remote trmnmc/alpaca-v2');
+    expect(text).toContain('== Empty folders (1)\n  FUN');
+    expect(text).toContain('== Unsorted (2)\n  FUN, random');
+    expect(text).toContain('== Possible duplicates (0)\n  (none)');
+    expect(text).toContain('== Loose files at the root (2)\n  snapshot.zip, ssh-key');
+  });
+  it('shows duplicate reasons', () => {
+    const t = renderReport({ records, notices: { ...notices, duplicates: [{ reason: 'remote', key: 'trmnmc/x', names: ['A', 'A 2'] }] }, config: defaultConfig(), staleDays: 90 });
+    expect(t).toContain('== Possible duplicates (1)\n  A, A 2 — same remote trmnmc/x');
   });
 });
