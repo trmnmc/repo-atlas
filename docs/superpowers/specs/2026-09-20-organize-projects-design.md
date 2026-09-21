@@ -1,7 +1,7 @@
 # Organize `~/Projects` — design
 
 Date: 2026-09-20
-Status: approved in conversation, pending written review
+Status: approved 2026-09-21
 Owner: Truman (trmnmc)
 
 ## 1. Purpose
@@ -362,7 +362,10 @@ These steps are for the person, not the tool:
 - Skipping `Outdated/` in the dashboard walk. Pre-existing behavior.
 - Moving zips into `Outdated/zips/`. The user chose to leave loose files alone.
 - An undo command. `MOVES.log` makes undo a one-line `mv`.
-- Pushing remote-less projects to GitHub. Not part of organizing the folder.
+
+## 12. Follow-up: push remote-less projects to GitHub
+
+Decided 2026-09-21. After the `organize` command ships and the first cleanup is done, the 27 git projects with no remote get pushed to GitHub under `trmnmc`. This is a separate piece of work with its own short design, because each repo needs a decision: push or not, public or private, and what to name it. Creating remote repositories is an outward-facing action, so nothing is pushed without a per-repo yes. The archive step in this design comes first, so retired projects are not pushed by mistake.
 
 ## 11. Prior art considered
 
