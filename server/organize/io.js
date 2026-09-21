@@ -2,7 +2,10 @@
  * Repo Atlas — organize: file helpers (plain Node ESM, zero deps).
  *
  * readTextOrNull(file) never throws: missing, unreadable, or a directory
- * all return null. writeTextAtomic(file, text) mirrors server/cache.js:
+ * all return null. readTextOrMissing(file) is stricter: only a missing
+ * file (ENOENT) reads as null; any other error (EACCES, EISDIR, ...) is
+ * rethrown, so a present-but-unreadable file is never mistaken for an
+ * absent one. writeTextAtomic(file, text) mirrors server/cache.js:
  * unique sibling temp file, then rename (atomic within one directory on
  * POSIX); the temp file is removed on any failure. appendLine(file, line)
  * creates the parent directory and appends `line + '\n'`.
@@ -21,6 +24,19 @@ export async function readTextOrNull(file) {
     return await fs.readFile(file, 'utf8');
   } catch {
     return null;
+  }
+}
+
+/**
+ * @param {string} file
+ * @returns {Promise<string|null>} null only when the file does not exist
+ */
+export async function readTextOrMissing(file) {
+  try {
+    return await fs.readFile(file, 'utf8');
+  } catch (err) {
+    if (/** @type {NodeJS.ErrnoException} */ (err).code === 'ENOENT') return null;
+    throw err;
   }
 }
 

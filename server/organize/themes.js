@@ -12,10 +12,12 @@
  * loadConfig NEVER writes: a missing file yields the default map with
  * created:true and the CLI decides whether to persist it (never on
  * --dry-run). A corrupt or wrong-shaped file throws ConfigError and is
- * never overwritten.
+ * never overwritten. A present-but-unreadable file (EACCES, ...) is not
+ * "missing" either: readTextOrMissing rethrows so the caller can tell the
+ * two apart and avoid overwriting a file it could not actually read.
  */
 
-import { readTextOrNull, writeTextAtomic } from './io.js';
+import { readTextOrMissing, writeTextAtomic } from './io.js';
 
 /** @typedef {{ themes: Array<{ name: string, match: string[] }>, overrides: Record<string, string>, paused: Record<string, string> }} OrganizeConfig */
 
@@ -121,7 +123,7 @@ export class ConfigError extends Error {
  * @returns {Promise<{ config: OrganizeConfig, created: boolean }>}
  */
 export async function loadConfig(file) {
-  const raw = await readTextOrNull(file);
+  const raw = await readTextOrMissing(file);
   if (raw === null) return { config: defaultConfig(), created: true };
   let parsed;
   try {

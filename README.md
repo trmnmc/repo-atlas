@@ -111,7 +111,10 @@ coding agents. Stale means the later of last commit and newest file time
 is strictly more than 90 days old. `--dry-run` prints the report and
 writes nothing. Keep answers are remembered in `projects.json`; remove a
 name from `paused` to be asked again. The command never deletes, never
-moves an active project, and never touches loose files. Design:
+moves an active project, and never touches loose files. Run it from a
+terminal for normal use. From a script, an agent, or cron, run it with
+`--dry-run`. When stdin is not interactive, the tool skips every prompt
+and only refreshes the index files. Design:
 `docs/superpowers/specs/2026-09-20-organize-projects-design.md`.
 
 ## Boundaries

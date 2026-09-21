@@ -3,12 +3,19 @@
  * Repo Atlas — organize/cli: flags, config merge, dry-run writes nothing,
  * a full scripted run moves + writes, error exits. mktemp root only.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { defaultConfig } from './themes.js';
 import { CONFIG_FILE, INDEX_FILE, CLAUDE_FILE, parseFlags, applyDecisionsToConfig, main } from './cli.js';
+
+const TEST_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(TEST_DIR, '..', '..');
+const CLI_PATH = path.join(TEST_DIR, 'cli.js');
+const IS_ROOT = typeof process.getuid === 'function' && process.getuid() === 0;
 
 const NOW = '2026-09-21T12:00:00-05:00';
 function touch(file, iso) {
@@ -56,8 +63,8 @@ describe('parseFlags', () => {
 });
 
 describe('applyDecisionsToConfig', () => {
-  it('records theme picks and keeps, ignores the rest, and does not mutate', () => {
-    const c = defaultConfig();
+  it('records theme picks and keeps, ignores the rest, does not mutate, and keeps unknown top-level keys', () => {
+    const c = { ...defaultConfig(), notes: 'x' };
     const next = applyDecisionsToConfig(c, [
       { name: 'moon', action: 'theme', theme: 'games' },
       { name: 'alpaca-v2', action: 'keep' },
@@ -68,6 +75,7 @@ describe('applyDecisionsToConfig', () => {
     expect(next.paused).toEqual({ 'alpaca-v2': '2026-09-21' });
     expect(c.overrides).toEqual({});
     expect(c.paused).toEqual({});
+    expect(next.notes).toBe('x');
   });
 });
 
@@ -130,6 +138,65 @@ describe('main', () => {
     expect(claude).toContain('<!-- atlas:end -->');
     expect(fs.readFileSync(path.join(root, INDEX_FILE), 'utf8')).toMatch(/^\| old \| folder \| paused \|/m);
     fs.rmSync(root, { recursive: true, force: true });
+  });
+
+  it('non-interactive stdin (EOF immediately) finishes the run and writes the three files', () => {
+    const root = makeRoot();
+    try {
+      const stdout = execFileSync(process.execPath, [CLI_PATH, '--root', root], {
+        cwd: REPO_ROOT,
+        input: '',
+        encoding: 'utf8',
+        timeout: 8000,
+      });
+      expect(stdout).toContain(
+        `Moved 0, skipped 0. Wrote ${CONFIG_FILE}, ${INDEX_FILE}, ${CLAUDE_FILE} in ${root}.`,
+      );
+      expect(fs.existsSync(path.join(root, CONFIG_FILE))).toBe(true);
+      expect(fs.existsSync(path.join(root, INDEX_FILE))).toBe(true);
+      expect(fs.existsSync(path.join(root, CLAUDE_FILE))).toBe(true);
+      // 'old' is the stale/unsorted folder from makeRoot(); it must not be moved.
+      expect(fs.existsSync(path.join(root, 'old'))).toBe(true);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 10000);
+
+  it('exits 1 and writes nothing when projects.json is present but unreadable', async () => {
+    if (IS_ROOT) return; // root ignores mode bits
+    const root = makeRoot();
+    const configPath = path.join(root, CONFIG_FILE);
+    fs.writeFileSync(configPath, `${JSON.stringify(defaultConfig(), null, 2)}\n`);
+    fs.chmodSync(configPath, 0o000);
+    try {
+      const h = io();
+      const code = await main(['--root', root], h);
+      expect(code).toBe(1);
+      expect(h.errors.join('\n')).toMatch(/Cannot read/);
+      expect(fs.existsSync(path.join(root, INDEX_FILE))).toBe(false);
+      expect(fs.existsSync(path.join(root, CLAUDE_FILE))).toBe(false);
+    } finally {
+      fs.chmodSync(configPath, 0o644);
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('exits 1 and writes no PROJECTS.md when CLAUDE.md is present but unreadable', async () => {
+    if (IS_ROOT) return; // root ignores mode bits
+    const root = makeRoot();
+    const claudePath = path.join(root, CLAUDE_FILE);
+    fs.writeFileSync(claudePath, '# Mine\n\nkeep me\n');
+    fs.chmodSync(claudePath, 0o000);
+    try {
+      const h = io();
+      const code = await main(['--root', root], h);
+      expect(code).toBe(1);
+      expect(h.errors.join('\n')).toMatch(/Cannot read/);
+      expect(fs.existsSync(path.join(root, INDEX_FILE))).toBe(false);
+    } finally {
+      fs.chmodSync(claudePath, 0o644);
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('exits 1 on bad flags, a missing root, and a corrupt config', async () => {

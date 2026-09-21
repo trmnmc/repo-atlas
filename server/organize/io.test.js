@@ -7,7 +7,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { readTextOrNull, writeTextAtomic, appendLine } from './io.js';
+import { readTextOrNull, readTextOrMissing, writeTextAtomic, appendLine } from './io.js';
 
 let root;
 beforeAll(() => {
@@ -28,6 +28,20 @@ describe('readTextOrNull', () => {
   });
   it('returns null for a directory', async () => {
     expect(await readTextOrNull(root)).toBeNull();
+  });
+});
+
+describe('readTextOrMissing', () => {
+  it('returns null for a missing file', async () => {
+    expect(await readTextOrMissing(path.join(root, 'nope-missing.txt'))).toBeNull();
+  });
+  it('returns the file text for a readable file', async () => {
+    const f = path.join(root, 'missing-a.txt');
+    fs.writeFileSync(f, 'hello\n');
+    expect(await readTextOrMissing(f)).toBe('hello\n');
+  });
+  it('rejects for a directory (EISDIR), not treating it as missing', async () => {
+    await expect(readTextOrMissing(root)).rejects.toMatchObject({ code: 'EISDIR' });
   });
 });
 
