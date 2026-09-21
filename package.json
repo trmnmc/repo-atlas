@@ -9,7 +9,8 @@
     "build": "vite build",
     "test": "vitest run",
     "demo": "vite build && node server/index.js --demo",
-    "build:demo": "vite build --config vite.demo.config.ts"
+    "build:demo": "vite build --config vite.demo.config.ts",
+    "organize": "node server/organize/cli.js"
   },
   "dependencies": {
     "react": "19.2.8",
