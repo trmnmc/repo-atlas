@@ -3,3 +3,4 @@ dist/
 .atlas-cache.json
 *.log
 .gstack/
+dist-demo/

@@ -31,6 +31,7 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ROUTES } from '../shared/contract.js';
 import { scan } from './scan.js';
+import { makeDemoScanFn } from '../shared/demoSnapshot.js';
 import { loadCache, saveCache } from './cache.js';
 
 /** @typedef {import('../shared/contract.js').Snapshot} Snapshot */
@@ -441,16 +442,38 @@ export function createServer({
 /* Main entry                                                          */
 /* ------------------------------------------------------------------ */
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+/**
+ * createServer config for the main entry. `--demo` swaps the git scan for the
+ * sample Snapshot (shared/demoSnapshot.js) and isolates everything the owner
+ * cares about: a throwaway cache file, so the real .atlas-cache.json is
+ * neither served nor overwritten, and no native actions, because the sample
+ * repo paths do not exist on this machine.
+ *
+ * @param {string[]} argv
+ */
+export function mainConfig(argv) {
   const rootDir = path.join(os.homedir(), 'Projects');
-  const server = createServer({
+  if (!argv.includes('--demo')) {
+    return { rootDir, cacheFile: DEFAULT_CACHE_FILE, scanFn: scan, port: DEFAULT_PORT };
+  }
+  return {
     rootDir,
-    cacheFile: DEFAULT_CACHE_FILE,
-    scanFn: scan,
+    cacheFile: path.join(os.tmpdir(), 'repo-atlas-demo-cache.json'),
+    scanFn: makeDemoScanFn(),
     port: DEFAULT_PORT,
-  });
+    repoActionFn: async () => {
+      throw new Error('native actions are disabled in demo mode');
+    },
+  };
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const demo = process.argv.includes('--demo');
+  const server = createServer(mainConfig(process.argv));
   server.listen(DEFAULT_PORT, () => {
-    console.log(`[repo-atlas] listening on http://localhost:${DEFAULT_PORT}`);
+    console.log(
+      `[repo-atlas] listening on http://localhost:${DEFAULT_PORT}${demo ? ' (demo: sample data)' : ''}`,
+    );
   });
   // Cache-first: whatever's on disk serves immediately; always kick a
   // background scan on boot so data freshens without a restart.

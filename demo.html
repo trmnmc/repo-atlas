@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Repo Atlas — Survey Folio (sample data)</title>
+    <link rel="stylesheet" href="/src/styles/tokens.css" />
+    <script>
+      // Theme bootstrap before first paint. Honors a saved choice, else the
+      // OS preference. Views may flip data-theme at runtime; persist under
+      // the same key ("atlas-theme": "light" | "dark").
+      (function () {
+        var saved = null;
+        try { saved = localStorage.getItem('atlas-theme'); } catch (e) {}
+        var theme =
+          saved === 'light' || saved === 'dark'
+            ? saved
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+      })();
+    </script>
+  </head>
+  <body>
+    <p class="demo-banner">
+      <strong>Sample data.</strong> Repo Atlas surveys the Git repositories on your own machine,
+      so this hosted folio shows six invented ones.
+      <a href="https://github.com/trmnmc/repo-atlas">Clone the repo</a> to run it on yours ·
+      <a href="/projects">More SWARM projects</a>
+    </p>
+    <div id="root"></div>
+    <script type="module" src="/src/demo-main.tsx"></script>
+  </body>
+</html>

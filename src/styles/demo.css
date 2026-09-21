@@ -1,0 +1,24 @@
+/**
+ * demo.css — the hosted demo's "Sample data" notice. Demo build only
+ * (imported by src/demo-main.tsx); built on the frozen token names.
+ */
+.demo-banner {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+  background: var(--vermilion-wash);
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.demo-banner strong {
+  color: var(--vermilion-ink);
+  font-weight: 600;
+}
+
+.demo-banner a {
+  color: inherit;
+}
