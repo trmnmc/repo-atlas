@@ -93,30 +93,6 @@ Commit-day bucketing (for the heatmaps) uses the author date's **local
 timezone** calendar day, not UTC — a late-night commit doesn't drift onto
 the wrong day.
 
-## Organize
-
-```
-npm run organize -- [--root <dir>] [--stale-days <n>] [--dry-run]
-```
-
-Surveys the top level of `~/Projects` (plain folders count, not only git
-repos), gives every project a theme from `~/Projects/projects.json` and a
-status — `active`, `paused`, `stale`, `empty`, or `unknown` — then walks
-you through three rounds of questions: a theme for each unsorted folder,
-archive/keep/skip for each stale project, and the same for empty folders.
-One final `y` applies the queued moves into `Outdated/archived-projects/`
-or `Outdated/empties/`, each logged in `Outdated/MOVES.log`. It then writes
-`PROJECTS.md` (the complete map) and a short block in `CLAUDE.md` for
-coding agents. Stale means the later of last commit and newest file time
-is strictly more than 90 days old. `--dry-run` prints the report and
-writes nothing. Keep answers are remembered in `projects.json`; remove a
-name from `paused` to be asked again. The command never deletes, never
-moves an active project, and never touches loose files. Run it from a
-terminal for normal use. From a script, an agent, or cron, run it with
-`--dry-run`. When stdin is not interactive, the tool skips every prompt
-and only refreshes the index files. Design:
-`docs/superpowers/specs/2026-09-20-organize-projects-design.md`.
-
 ## Boundaries
 
 Repo Atlas is **read-only** and **local-git-only**. It never fetches from a
